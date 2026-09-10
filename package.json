@@ -1,0 +1,30 @@
+{
+  "name": "habit-backend",
+  "version": "1.0.0",
+  "description": "REST API for Habit Tracker \u2014 Node.js + Express + MongoDB",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "test": "jest --runInBand",
+    "lint": "eslint src/"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
+    "express-validator": "^7.3.2",
+    "helmet": "^8.2.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.6.3",
+    "morgan": "^1.11.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

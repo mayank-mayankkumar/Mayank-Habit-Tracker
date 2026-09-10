@@ -1,165 +1,351 @@
-# Habit Tracker — Firebase Setup Guide
+# Habit Tracker — REST API
 
-## Files in this folder
-```
-auth.html                   ← Login / Signup page (Firebase Auth)
-index.html                  ← Main tracker dashboard (Firestore real-time)
-profile.html                ← User profile + settings
-notifications.html          ← Reminders & notification settings
-analytics.html              ← Habit analytics & insights
-firestore.rules             ← Paste into Firebase Console → Rules
-firebase-config.js          ← 🔒 YOUR real keys (git-ignored, never pushed)
-firebase-config.example.js  ← ✅ Safe template (pushed to GitHub)
-.gitignore                  ← Blocks secrets from being committed
-theme.js                    ← Light/dark theme toggle
-pwa.js                      ← PWA service worker registration
-sw.js                       ← Service worker
-manifest.json               ← PWA manifest
-README.md                   ← This file
-```
+**Node.js · Express · MongoDB · JWT Auth**
 
 ---
 
-## Step 1 — Create a Firebase Project (5 minutes)
-
-1. Go to **https://console.firebase.google.com**
-2. Click **"Add project"** → Name it `habit-tracker-2026`
-3. Disable Google Analytics (not needed) → **Create project**
-
----
-
-## Step 2 — Enable Authentication
-
-1. In your project → **Build → Authentication → Get started**
-2. Click **Sign-in method** tab
-3. Enable **Email/Password** → Save
-4. Enable **Google** → Add your support email → Save
-
----
-
-## Step 3 — Create Firestore Database
-
-1. **Build → Firestore Database → Create database**
-2. Choose **"Start in test mode"** (we'll add rules in Step 5)
-3. Pick a region close to India: `asia-south1 (Mumbai)` → Done
-
----
-
-## Step 4 — Get Your Config Keys
-
-1. Project Overview → click the **`</>`** (Web) icon
-2. Register app name: `habit-tracker-web` → Register
-3. Copy the `firebaseConfig` object — it looks like:
-
-```js
-const firebaseConfig = {
-  apiKey:            "AIzaSy...",
-  authDomain:        "habit-tracker-2026.firebaseapp.com",
-  projectId:         "habit-tracker-2026",
-  storageBucket:     "habit-tracker-2026.appspot.com",
-  messagingSenderId: "123456789",
-  appId:             "1:123...:web:abc..."
-};
-```
-
-4. **Copy** `firebase-config.example.js` → `firebase-config.js`
-5. Replace the placeholder values in `firebase-config.js` with your real values
-6. **That's it!** All HTML pages load from this one file automatically.
-
-> ⚠️ `firebase-config.js` is git-ignored — your keys stay local and are never pushed to GitHub.
-
----
-
-## Step 5 — Add Security Rules
-
-1. **Firestore → Rules** tab
-2. Delete what's there
-3. Paste the entire contents of `firestore.rules`
-4. Click **Publish**
-
----
-
-## Step 6 — Enable Firebase Storage (for profile photos)
-
-1. **Build → Storage → Get started**
-2. Start in test mode → Choose same region → Done
-3. Go to **Rules** tab and paste:
+## Project Structure
 
 ```
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /avatars/{userId}/{allPaths=**} {
-      allow read, write: if request.auth != null
-                         && request.auth.uid == userId;
-    }
+habit-tracker-backend/
+├── src/
+│   ├── app.js                  ← Express app + DB connection + server
+│   ├── models/
+│   │   ├── User.js             ← User schema (bcrypt, virtuals)
+│   │   ├── Habit.js            ← Habit schema (compound index)
+│   │   └── CheckIn.js          ← CheckIn + Note schemas (upsert pattern)
+│   ├── routes/
+│   │   ├── auth.js             ← Register, login, refresh, profile CRUD
+│   │   ├── habits.js           ← Habits CRUD + reorder
+│   │   ├── checkins.js         ← Toggle, bulk, analytics aggregation
+│   │   └── notes.js            ← Notes upsert/CRUD
+│   ├── middleware/
+│   │   ├── auth.js             ← JWT protect + optionalAuth
+│   │   └── errorHandler.js     ← asyncHandler, validate, 404, globalError
+│   └── utils/
+│       └── jwt.js              ← signToken, sendToken, response helpers
+├── .env.example
+├── package.json
+└── README.md                   ← This file
+```
+
+---
+
+## Quick Start
+
+```bash
+# 1. Copy env
+cp .env.example .env
+# Edit MONGO_URI and JWT_SECRET in .env
+
+# 2. Install
+npm install
+
+# 3. Run (dev mode with auto-reload)
+npm run dev
+
+# 4. Production
+npm start
+```
+
+---
+
+## Environment Variables
+
+| Variable              | Description                    | Default                          |
+|-----------------------|--------------------------------|----------------------------------|
+| `PORT`                | Server port                    | `5000`                           |
+| `MONGO_URI`           | MongoDB connection string      | `mongodb://localhost:27017/habit_tracker` |
+| `JWT_SECRET`          | JWT signing secret (change!)   | —                                |
+| `JWT_EXPIRES_IN`      | Access token lifetime          | `7d`                             |
+| `JWT_REFRESH_EXPIRES_IN` | Refresh token lifetime      | `30d`                            |
+| `ALLOWED_ORIGINS`     | CORS origins (comma-separated) | `http://localhost:3000`          |
+| `RATE_LIMIT_MAX`      | Max requests per window        | `100`                            |
+
+---
+
+## Authentication
+
+All private routes require: `Authorization: Bearer <accessToken>`
+
+Access tokens expire in 7 days. Use the refresh endpoint to get a new one silently.
+
+---
+
+## API Reference
+
+### Auth
+
+#### `POST /api/auth/register`
+Create account. Seeds 11 default habits automatically.
+
+**Body:**
+```json
+{
+  "name":     "Yash Sharma",
+  "email":    "yash@example.com",
+  "password": "SecurePass1"
+}
+```
+
+**Response `201`:**
+```json
+{
+  "success":      true,
+  "accessToken":  "eyJ...",
+  "refreshToken": "eyJ...",
+  "expiresIn":    "7d",
+  "user":         { "id": "...", "name": "Yash Sharma", "email": "..." }
+}
+```
+
+---
+
+#### `POST /api/auth/login`
+**Body:** `{ "email", "password" }`
+**Response `200`:** Same as register.
+
+---
+
+#### `POST /api/auth/refresh`
+**Body:** `{ "refreshToken": "eyJ..." }`
+**Response `200`:** New `accessToken` + `refreshToken`.
+
+---
+
+#### `GET /api/auth/me`  🔒
+Returns full user profile.
+
+---
+
+#### `PATCH /api/auth/me`  🔒
+Update profile fields. All optional.
+
+**Body:** `{ "name", "college", "branch", "bio", "photoURL" }`
+
+---
+
+#### `POST /api/auth/change-password`  🔒
+**Body:** `{ "currentPassword", "newPassword" }`
+
+---
+
+#### `DELETE /api/auth/me`  🔒
+Permanently deletes account + all habits, check-ins, and notes.
+
+---
+
+### Habits
+
+#### `GET /api/habits`  🔒
+Get all habits. Query params: `?category=health|study|work|discipline`, `?search=text`, `?isActive=false`
+
+**Response:**
+```json
+{
+  "success": true,
+  "count":   11,
+  "habits":  [
+    { "id": "...", "name": "Deep Work [2hr]", "emoji": "🧠",
+      "category": "study", "goal": 2, "order": 4 }
+  ]
+}
+```
+
+---
+
+#### `POST /api/habits`  🔒
+**Body:**
+```json
+{
+  "name":        "Morning Run",
+  "emoji":       "🏃",
+  "category":    "health",
+  "goal":        1,
+  "aiGenerated": false
+}
+```
+**Response `201`:** `{ "success": true, "habit": {...} }`
+
+---
+
+#### `GET /api/habits/:id`  🔒
+Get single habit.
+
+---
+
+#### `PATCH /api/habits/:id`  🔒
+Partial update. Only provided fields change.
+**Body:** Any subset of `{ name, emoji, category, goal, order, isActive }`
+
+---
+
+#### `DELETE /api/habits/:id`  🔒
+Soft delete (sets `isActive: false`). Append `?hard=true` to permanently delete.
+
+---
+
+#### `POST /api/habits/reorder`  🔒
+Batch order update. Uses MongoDB `bulkWrite` — O(1) per habit.
+
+**Body:**
+```json
+{
+  "orders": [
+    { "id": "habit_id_1", "order": 0 },
+    { "id": "habit_id_2", "order": 1 }
+  ]
+}
+```
+
+---
+
+### Check-ins
+
+#### `GET /api/checkins?year=2026&month=4`  🔒
+Month is 0-indexed (4 = May). Returns one doc per day that has data.
+
+**Response:**
+```json
+{
+  "checkins": [
+    { "date": "2026-05-06", "checks": { "habit_id_1": true, "habit_id_2": false } }
+  ]
+}
+```
+
+---
+
+#### `POST /api/checkins/toggle`  🔒
+Toggle one habit on one date. **Atomic upsert** — creates the day doc on first use.
+
+**Body:**
+```json
+{ "habitId": "habit_id_1", "date": "2026-05-06" }
+```
+
+**Response:**
+```json
+{ "success": true, "checked": true, "date": "2026-05-06", "habitId": "..." }
+```
+
+---
+
+#### `PUT /api/checkins/:date`  🔒
+Replace full checks map for a date.
+**Body:** `{ "checks": { "id1": true, "id2": false } }`
+
+---
+
+#### `DELETE /api/checkins/:date`  🔒
+Clear all check-in data for a specific date.
+
+---
+
+#### `GET /api/checkins/analytics/summary?year=2026&month=4`  🔒
+Full analytics without a frontend calculation.
+
+**Response:**
+```json
+{
+  "summary": {
+    "globalPct":     72,
+    "currentStreak": 5,
+    "longestStreak": 12,
+    "best":  { "name": "Deep Work", "pct": 94 },
+    "worst": { "name": "No Doomscrolling", "pct": 41 },
+    "habitStats":    [...],
+    "categoryStats": [...],
+    "dowAvg":        [62, 88, 85, 90, 82, 71, 55],
+    "dayScores":     [{ "day": 1, "score": 80 }, ...]
   }
 }
 ```
 
 ---
 
-## Step 7 — Deploy to GitHub Pages
+### Notes
+
+#### `GET /api/notes?habitId=&year=2026&month=4`  🔒
+
+#### `PUT /api/notes`  🔒
+Upsert note (create or update).
+**Body:** `{ "habitId", "date", "text", "mood", "tags": ["win","insight"] }`
+
+#### `GET /api/notes/:habitId/:date`  🔒
+#### `DELETE /api/notes/:habitId/:date`  🔒
+
+---
+
+## Data Design — Interview Talking Points
+
+### Why MongoDB?
+Habit check-ins are **write-heavy** (multiple toggles per day) and read as **monthly ranges**. MongoDB's flexible schema handles the `checks` Map (`habitId → boolean`) cleanly. The `CheckIn` document design (one doc per user per day) minimises write amplification vs. one doc per (user, habit, day).
+
+### Index Strategy
+| Collection | Index                        | Purpose                            |
+|------------|------------------------------|------------------------------------|
+| User       | `{ email: 1 }`               | O(1) login lookup                  |
+| Habit      | `{ userId: 1, order: 1 }`    | Sorted habit list query            |
+| CheckIn    | `{ userId: 1, date: 1 }` UNIQUE | Upsert & monthly range scan   |
+| Note       | `{ userId, habitId, date }` UNIQUE | Upsert note for a day       |
+
+### JWT Pattern
+- **Access token**: 7-day, stateless, verified in middleware.
+- **Refresh token**: 30-day, `type: 'refresh'` claim prevents misuse.
+- Passwords use **bcrypt with cost factor 12** (≈250ms, brute-force resistant).
+- `password` field has `select: false` — never sent in any response.
+
+### asyncHandler pattern
+```js
+const asyncHandler = fn => (req, res, next) =>
+  Promise.resolve(fn(req, res, next)).catch(next);
+```
+Eliminates try/catch from every route — errors propagate to the global handler.
+
+### SOLID error handling
+All errors go through one place: `errorHandler`. It normalises Mongoose `CastError`, `ValidationError`, duplicate-key `11000`, and JWT errors into consistent `{ success, error }` responses.
+
+---
+
+## Deployment (Railway / Render / Fly.io)
 
 ```bash
-# Create a new GitHub repo: habit-tracker-2026
+# Railway
+railway login
+railway init
+railway add --plugin mongodb
+railway up
 
-git init
-git add .
-git commit -m "feat: habit tracker with Firebase auth + Firestore sync"
-git remote add origin https://github.com/YOUR_USERNAME/habit-tracker-2026.git
-git push -u origin main
-
-# In GitHub → repo Settings → Pages → Source: main branch → Save
-# Your live URL: https://YOUR_USERNAME.github.io/habit-tracker-2026/auth.html
+# Set env vars in Railway dashboard:
+# MONGO_URI, JWT_SECRET, NODE_ENV=production, ALLOWED_ORIGINS
 ```
 
 ---
 
-## Firestore Data Structure
+## Connect Frontend to This API
 
+In your `index.html`, replace the Firebase calls with:
+
+```javascript
+const API = 'https://your-api.railway.app';
+
+// Login
+const { accessToken, user } = await fetch(`${API}/api/auth/login`, {
+  method:  'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body:    JSON.stringify({ email, password }),
+}).then(r => r.json());
+
+// Authenticated request
+const { habits } = await fetch(`${API}/api/habits`, {
+  headers: { Authorization: `Bearer ${accessToken}` },
+}).then(r => r.json());
+
+// Toggle habit
+await fetch(`${API}/api/checkins/toggle`, {
+  method:  'POST',
+  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+  body:    JSON.stringify({ habitId: 'h1', date: '2026-05-06' }),
+});
 ```
-users/
-  {uid}/                         ← User profile doc
-    name: "Your Name"
-    email: "you@gmail.com"
-    college: "RTU Kota"
-    branch: "B.Tech CSE"
-    bio: "Targeting TCS placement Nov 2026"
-    createdAt: Timestamp
-    lastLogin: Timestamp
-
-    habits/                      ← Sub-collection
-      h1/  { name, emoji, goal, category, order }
-      h2/  { name, emoji, goal, category, order }
-      ...
-
-    checks/                      ← Sub-collection (one doc per day)
-      2026-05-10/  { h1: true, h2: false, h3: true, ... }
-      2026-05-11/  { h1: true, h2: true,  h3: false, ... }
-      ...
-```
-
----
-
-## Why this architecture is placement-worthy
-
-| Feature | Tech Used | What it shows recruiters |
-|---|---|---|
-| Auth | Firebase Auth | Real authentication patterns |
-| Real-time sync | Firestore onSnapshot | WebSocket / event-driven design |
-| Offline mode | Firestore persistence | PWA awareness |
-| Security | Firestore Rules | Understanding of auth + data security |
-| Cloud storage | Firebase Storage | File upload handling |
-| Multi-device | Cloud DB | Distributed systems thinking |
-
----
-
-## Free Tier Limits (Spark Plan — Free forever)
-
-- **Auth:** Unlimited users
-- **Firestore:** 50,000 reads/day, 20,000 writes/day, 1 GB storage
-- **Storage:** 5 GB (plenty for profile photos)
-- **Hosting:** 10 GB/month bandwidth
-
-This tracker will comfortably stay free unless you have 1000+ daily active users.
