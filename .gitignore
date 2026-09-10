@@ -1,0 +1,15 @@
+# ── Secrets (never push to GitHub) ─────────────────────────
+firebase-config.js
+
+# ── OS / Editor junk ──────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# ── Node (if ever used) ──────────────────────────────────
+node_modules/
+npm-debug.log*

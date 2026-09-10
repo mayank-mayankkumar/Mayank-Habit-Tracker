@@ -1,0 +1,2942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Habit Tracker — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d0d0d;--surface:#141414;--card:#1a1a1a;--border:#2a2a2a;
+  --accent:#c8f060;--accent2:#f0a060;--accent3:#60c8f0;
+  --red:#f06060;--text:#e8e8e8;--muted:#666;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Space Mono',monospace;min-height:100vh;}
+
+/* NAV */
+nav{padding:14px 32px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);position:sticky;top:0;z-index:50;}
+.nav-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:var(--accent);}
+.nav-logo span{color:var(--text);}
+.nav-right{display:flex;align-items:center;gap:10px;}
+.sync-badge{display:flex;align-items:center;gap:6px;font-size:11px;
+  padding:5px 10px;border-radius:20px;border:1px solid;transition:all 0.3s;}
+.sync-badge.synced{color:#60f0a0;border-color:rgba(96,240,160,0.3);background:rgba(96,240,160,0.08);}
+.sync-badge.syncing{color:var(--accent2);border-color:rgba(240,160,96,0.3);background:rgba(240,160,96,0.08);}
+.sync-badge.offline{color:var(--red);border-color:rgba(240,96,96,0.3);background:rgba(240,96,96,0.08);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+.sync-dot.spinning{animation:pulse 1s ease infinite;}
+.nav-avatar{width:30px;height:30px;border-radius:50%;border:2px solid var(--accent);
+  background:var(--card);display:flex;align-items:center;justify-content:center;
+  font-family:'Syne',sans-serif;font-size:11px;font-weight:800;color:var(--accent);
+  overflow:hidden;cursor:pointer;text-decoration:none;}
+.nav-avatar img{width:100%;height:100%;object-fit:cover;}
+.btn-sm{background:transparent;border:1px solid var(--border);color:var(--muted);
+  padding:6px 12px;border-radius:6px;font-family:'Space Mono',monospace;
+  font-size:11px;cursor:pointer;transition:all 0.15s;}
+.btn-sm:hover{border-color:var(--red);color:var(--red);}
+
+/* PROGRESS BANNER */
+.banner{margin:20px 32px;background:var(--card);border:1px solid var(--border);
+  border-radius:12px;padding:20px 24px;display:flex;align-items:center;gap:32px;flex-wrap:wrap;}
+.pstat{display:flex;flex-direction:column;gap:3px;}
+.plbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;}
+.pval{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--accent);}
+.pbar-wrap{flex:1;min-width:180px;}
+.pbar-bg{height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin:8px 0 4px;}
+.pbar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent3));
+  border-radius:4px;transition:width 0.6s ease;}
+.pbar-lbl{font-size:11px;color:var(--muted);}
+.donut-wrap{position:relative;width:72px;height:72px;}
+.donut-svg{transform:rotate(-90deg);}
+.donut-bg{fill:none;stroke:var(--border);stroke-width:10;}
+.donut-fg{fill:none;stroke:var(--accent);stroke-width:10;stroke-linecap:round;
+  transition:stroke-dashoffset 0.8s ease;}
+.donut-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:var(--accent);}
+
+/* MONTH NAV */
+.month-row{margin:0 32px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.mnav-btn{background:var(--card);border:1px solid var(--border);color:var(--text);
+  width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:16px;
+  display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.mnav-btn:hover{border-color:var(--accent);color:var(--accent);}
+.mlabel{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;
+  color:var(--accent);min-width:200px;}
+
+/* WEEKLY CARDS */
+.week-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+  gap:12px;margin:0 32px 20px;}
+.wcard{background:var(--card);border:1px solid var(--border);
+  border-radius:10px;padding:14px;}
+.wcard-t{font-size:10px;color:var(--muted);text-transform:uppercase;
+  letter-spacing:2px;margin-bottom:8px;}
+.wcard-row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;}
+.wcard-lbl{color:var(--muted);}
+.mini-bar{height:4px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden;}
+.mini-fill{height:100%;background:var(--accent);border-radius:2px;transition:width 0.5s;}
+
+/* ADD HABIT */
+.add-row{margin:0 32px 16px;display:flex;gap:10px;flex-wrap:wrap;}
+.add-input{flex:1;min-width:200px;background:var(--card);border:1px solid var(--border);
+  color:var(--text);font-family:'Space Mono',monospace;font-size:13px;
+  padding:10px 14px;border-radius:8px;outline:none;transition:border-color 0.2s;}
+.add-input:focus{border-color:var(--accent);}
+.add-input::placeholder{color:var(--muted);}
+.goal-inp{width:64px;background:var(--card);border:1px solid var(--border);
+  color:var(--accent2);font-family:'Space Mono',monospace;font-size:13px;
+  padding:10px 8px;border-radius:8px;outline:none;text-align:center;}
+.cat-sel{background:var(--card);border:1px solid var(--border);color:var(--muted);
+  font-family:'Space Mono',monospace;font-size:12px;padding:10px 10px;
+  border-radius:8px;outline:none;cursor:pointer;}
+.cat-sel option{background:#1a1a1a;}
+.btn-add{padding:10px 18px;border-radius:8px;border:none;cursor:pointer;
+  font-family:'Space Mono',monospace;font-size:12px;font-weight:700;
+  background:var(--accent);color:#0d0d0d;transition:all 0.15s;white-space:nowrap;}
+.btn-add:hover{background:#d8f070;transform:translateY(-1px);}
+.btn-add:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+
+/* TABLE */
+.table-wrap{margin:0 32px 32px;background:var(--card);
+  border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.table-scroll{overflow-x:auto;}
+.tbl{border-collapse:collapse;width:100%;min-width:900px;}
+.tbl th{background:var(--surface);font-size:10px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:1px;padding:10px 8px;
+  border-bottom:2px solid var(--accent);border-right:1px solid var(--border);
+  text-align:center;white-space:nowrap;}
+.tbl th.left{text-align:left;padding-left:16px;}
+.tbl td{border-right:1px solid var(--border);border-bottom:1px solid var(--border);
+  padding:0;text-align:center;height:40px;}
+.tbl td.habit-cell{text-align:left;padding:8px 12px;font-size:12px;
+  white-space:nowrap;min-width:180px;}
+.habit-name-inner{display:flex;align-items:center;gap:8px;}
+.del-btn{opacity:0;background:transparent;border:none;color:var(--red);
+  cursor:pointer;font-size:13px;padding:2px 4px;transition:opacity 0.2s;}
+.tbl tr:hover .del-btn{opacity:1;}
+.tbl td.goal-cell{color:var(--accent2);font-size:12px;font-weight:700;min-width:44px;}
+.day-btn{width:100%;height:40px;background:transparent;border:none;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background 0.1s;}
+.day-btn:hover{background:rgba(200,240,96,0.08);}
+.day-btn.weekend{background:rgba(255,255,255,0.01);}
+.checkbox{width:15px;height:15px;border:1.5px solid var(--border);
+  border-radius:3px;transition:all 0.15s;position:relative;pointer-events:none;}
+.day-btn.checked .checkbox{background:var(--accent);border-color:var(--accent);}
+.day-btn.checked .checkbox::after{content:'✓';position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);font-size:9px;color:#0d0d0d;font-weight:900;}
+.day-btn.today-col{background:rgba(200,240,96,0.04);}
+.day-btn.saving{pointer-events:none;opacity:0.5;}
+.stat-cell{font-size:11px;font-weight:700;min-width:44px;}
+.tbl th.today-h{color:var(--accent);background:rgba(200,240,96,0.06);}
+.streak-chip{display:inline-flex;align-items:center;gap:3px;
+  background:rgba(240,160,96,0.15);border:1px solid rgba(240,160,96,0.3);
+  color:var(--accent2);border-radius:20px;padding:1px 6px;font-size:10px;font-weight:700;}
+.empty-row td{height:34px;opacity:0.2;}
+
+
+/* ═══════════════════════════════════════════════════════════
+   SEARCH & FILTER BAR
+═══════════════════════════════════════════════════════════ */
+
+/* Search bar row */
+.search-filter-row {
+  margin: 0 32px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  animation: fadeSlideDown .3s ease both;
+}
+@keyframes fadeSlideDown {
+  from { opacity:0; transform:translateY(-8px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* Search input wrapper */
+.search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 180px;
+}
+.search-icon {
+  position: absolute;
+  left: 12px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  pointer-events: none;
+  color: var(--muted);
+  transition: color .2s;
+}
+.search-input {
+  width: 100%;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  padding: 10px 36px 10px 36px;
+  border-radius: 10px;
+  outline: none;
+  transition: border-color .2s, background .2s;
+}
+.search-input:focus { border-color: var(--accent); }
+.search-input:focus + .search-icon { color: var(--accent); }
+.search-input::placeholder { color: var(--muted); }
+.search-clear {
+  position: absolute;
+  right: 10px; top: 50%;
+  transform: translateY(-50%);
+  background: var(--border);
+  border: none;
+  color: var(--muted);
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 10px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, color .15s;
+  line-height: 1;
+}
+.search-clear:hover { background: var(--muted); color: var(--bg); }
+.search-clear.visible { display: flex; }
+
+/* Category filter chips */
+.filter-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.fchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: 100px;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--muted);
+  transition: all .18s;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.fchip:hover { border-color: var(--accent); color: var(--text); }
+.fchip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0d0d0d;
+  font-weight: 700;
+}
+.fchip-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .7;
+  flex-shrink: 0;
+}
+
+/* Status filter row */
+.status-row {
+  margin: 0 32px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 100px;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  transition: all .15s;
+  white-space: nowrap;
+  user-select: none;
+}
+.status-chip:hover { border-color: var(--accent); color: var(--text); }
+.status-chip.active { border-color: var(--accent); color: var(--accent); background: rgba(192,240,96,.08); }
+.results-count {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  margin-left: auto;
+  white-space: nowrap;
+  padding: 0 4px;
+}
+.results-count b { color: var(--accent); }
+
+/* Row highlight when search active */
+.tbl tr.search-match td.habit-cell {
+  background: rgba(192,240,96,.04);
+}
+.tbl tr.search-match .habit-name-inner span:nth-child(2) {}
+
+/* Highlight matched text */
+.hl {
+  background: rgba(192,240,96,.25);
+  color: var(--accent);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* Dimmed row when filtered out */
+.tbl tr.filtered-out {
+  display: none;
+}
+
+/* Empty filter state */
+.filter-empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.filter-empty-icon { font-size: 36px; margin-bottom: 12px; display: block; }
+.filter-empty-btn {
+  margin-top: 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.filter-empty-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Sort button */
+.sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  cursor: pointer;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--muted);
+  transition: all .15s;
+  white-space: nowrap;
+}
+.sort-btn:hover { border-color: var(--accent); color: var(--accent); }
+.sort-btn.active { border-color: var(--accent); color: var(--accent); }
+
+/* Active filter indicator strip */
+.active-filters-strip {
+  margin: -6px 32px 12px;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+.active-filters-strip.visible { display: flex; }
+.af-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(192,240,96,.1);
+  border: 1px solid rgba(192,240,96,.2);
+  color: var(--accent);
+  padding: 3px 8px;
+  border-radius: 100px;
+  font-size: 10px;
+}
+.af-remove {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+  line-height: 1;
+  opacity: .7;
+}
+.af-remove:hover { opacity: 1; }
+.af-clear-all {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 10px;
+  font-family: 'Space Mono', monospace;
+  text-decoration: underline;
+  padding: 0;
+  transition: color .15s;
+}
+.af-clear-all:hover { color: var(--accent); }
+
+/* Mobile */
+@media (max-width: 768px) {
+  .search-filter-row,
+  .status-row,
+  .active-filters-strip { margin-left: 14px; margin-right: 14px; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   HABIT NOTES SYSTEM
+══════════════════════════════════════════════════════════ */
+
+/* ── Note indicator dot on day cell ── */
+.day-btn { position: relative; }
+.note-dot {
+  position: absolute;
+  bottom: 4px; right: 4px;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--accent3);
+  opacity: .85;
+  pointer-events: none;
+  transition: transform .15s;
+}
+.day-btn:hover .note-dot { transform: scale(1.4); }
+
+/* ── Note icon on hover (long-press hint on mobile) ── */
+.day-btn::after {
+  content: '📝';
+  position: absolute;
+  top: 1px; right: 1px;
+  font-size: 8px;
+  opacity: 0;
+  transition: opacity .15s;
+  pointer-events: none;
+  line-height: 1;
+}
+.day-btn:hover::after { opacity: .5; }
+.day-btn.has-note::after { content: ''; } /* dot handles it */
+
+/* ── Context menu (right-click or long-press) ── */
+#note-ctx-menu {
+  position: fixed;
+  z-index: 8000;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  min-width: 170px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  overflow: hidden;
+  animation: ctxIn .15s ease both;
+}
+@keyframes ctxIn {
+  from { opacity:0; transform:scale(.95) translateY(-4px); }
+  to   { opacity:1; transform:none; }
+}
+.ctx-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background .12s;
+  border: none; background: transparent; width: 100%; text-align: left;
+}
+.ctx-item:hover { background: var(--border); }
+.ctx-item.danger { color: var(--red); }
+.ctx-item .ctx-icon { font-size: 14px; width: 18px; text-align: center; }
+.ctx-sep { height: 1px; background: var(--border); margin: 3px 0; }
+
+/* ── Notes modal backdrop ── */
+#note-modal-backdrop {
+  position: fixed; inset: 0; z-index: 9000;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: flex-end; justify-content: center;
+  animation: backdropIn .2s ease both;
+  padding: 0;
+}
+@media (min-width: 600px) {
+  #note-modal-backdrop { align-items: center; padding: 24px; }
+}
+@keyframes backdropIn { from { opacity:0; } to { opacity:1; } }
+
+/* ── Notes modal card ── */
+#note-modal {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px 18px 0 0;
+  width: 100%;
+  max-width: 520px;
+  max-height: 92vh;
+  display: flex; flex-direction: column;
+  animation: modalUp .28s cubic-bezier(.34,1.56,.64,1) both;
+  overflow: hidden;
+}
+@media (min-width: 600px) {
+  #note-modal { border-radius: 18px; max-height: 80vh; }
+}
+@keyframes modalUp {
+  from { opacity:0; transform:translateY(24px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* drag handle */
+.modal-handle {
+  width: 36px; height: 4px; border-radius: 2px;
+  background: var(--border);
+  margin: 10px auto 0;
+  flex-shrink: 0;
+}
+@media (min-width: 600px) { .modal-handle { display: none; } }
+
+.modal-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.modal-habit-emoji { font-size: 22px; }
+.modal-title-group { flex: 1; min-width: 0; }
+.modal-habit-name {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 15px; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.modal-date-label {
+  font-family: 'Space Mono', monospace; font-size: 10px;
+  color: var(--muted); margin-top: 2px;
+}
+.modal-close {
+  background: var(--border); border: none; color: var(--text);
+  width: 28px; height: 28px; border-radius: 50%;
+  cursor: pointer; font-size: 14px; line-height: 1;
+  transition: background .15s; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-close:hover { background: var(--muted); }
+
+.modal-body {
+  flex: 1; overflow-y: auto; padding: 16px 20px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+
+/* mood selector */
+.mood-row {
+  display: flex; gap: 8px; align-items: center;
+}
+.mood-label {
+  font-family: 'Space Mono', monospace; font-size: 10px;
+  color: var(--muted); text-transform: uppercase; letter-spacing: .1em;
+  white-space: nowrap;
+}
+.mood-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.mood-chip {
+  font-size: 18px; cursor: pointer; padding: 4px 6px;
+  border-radius: 8px; border: 1.5px solid transparent;
+  transition: all .15s; line-height: 1;
+  background: transparent;
+}
+.mood-chip:hover { background: var(--border); transform: scale(1.15); }
+.mood-chip.selected {
+  border-color: var(--accent); background: rgba(200,240,96,.1);
+  transform: scale(1.15);
+}
+
+/* note textarea */
+.note-textarea-wrap { position: relative; }
+.note-textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  line-height: 1.65;
+  padding: 12px 14px 32px;
+  border-radius: 10px;
+  resize: none;
+  outline: none;
+  min-height: 110px;
+  transition: border-color .2s;
+}
+.note-textarea:focus { border-color: var(--accent); }
+.note-textarea::placeholder { color: var(--muted); }
+.note-char-count {
+  position: absolute; bottom: 8px; right: 10px;
+  font-family: 'Space Mono', monospace; font-size: 9px;
+  color: var(--muted); pointer-events: none;
+}
+.note-char-count.warn { color: var(--accent2); }
+
+/* tags */
+.tags-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.tags-label {
+  font-family: 'Space Mono', monospace; font-size: 10px;
+  color: var(--muted); text-transform: uppercase; letter-spacing: .1em;
+}
+.note-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 100px;
+  font-family: 'Space Mono', monospace; font-size: 10px;
+  cursor: pointer; border: 1px solid var(--border);
+  background: var(--surface); color: var(--muted);
+  transition: all .15s; user-select: none;
+}
+.note-tag:hover { border-color: var(--accent3); color: var(--accent3); }
+.note-tag.on { background: rgba(96,200,240,.12); border-color: var(--accent3); color: var(--accent3); }
+
+/* save button */
+.modal-footer {
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
+}
+.btn-save-note {
+  flex: 1; padding: 11px 0;
+  background: var(--accent); color: #0d0d0d;
+  border: none; border-radius: 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px; font-weight: 700;
+  cursor: pointer; letter-spacing: .04em;
+  transition: all .15s;
+}
+.btn-save-note:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.btn-save-note:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.btn-del-note {
+  padding: 11px 14px;
+  background: transparent;
+  border: 1px solid rgba(240,96,96,.3);
+  color: var(--red); border-radius: 10px;
+  font-family: 'Space Mono', monospace; font-size: 11px;
+  cursor: pointer; transition: all .15s;
+}
+.btn-del-note:hover { background: rgba(240,96,96,.1); }
+
+/* ── Note history panel (inside modal) ── */
+.note-history-section {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+.note-history-title {
+  font-family: 'Space Mono', monospace; font-size: 10px;
+  color: var(--muted); text-transform: uppercase; letter-spacing: .1em;
+  margin-bottom: 10px;
+}
+.note-history-list { display: flex; flex-direction: column; gap: 8px; }
+.note-hist-item {
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.note-hist-item:hover { border-color: var(--accent3); }
+.nhi-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 4px;
+}
+.nhi-date {
+  font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted);
+}
+.nhi-mood { font-size: 14px; }
+.nhi-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.nhi-tag {
+  font-family: 'Space Mono', monospace; font-size: 9px;
+  color: var(--accent3); background: rgba(96,200,240,.1);
+  border-radius: 100px; padding: 1px 6px;
+}
+.nhi-text {
+  font-size: 12px; color: var(--text);
+  line-height: 1.5; opacity: .85;
+  overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+
+/* ── Notes summary chip in habit row ── */
+.note-count-chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: rgba(96,200,240,.1);
+  border: 1px solid rgba(96,200,240,.2);
+  color: var(--accent3); border-radius: 100px;
+  padding: 1px 6px; font-size: 9px;
+  font-family: 'Space Mono', monospace; cursor: pointer;
+  transition: background .15s;
+}
+.note-count-chip:hover { background: rgba(96,200,240,.2); }
+
+
+/* ═══════════════════════════════════════════════════════════
+   AI HABIT SUGGESTION PANEL
+═══════════════════════════════════════════════════════════ */
+.ai-panel {
+  margin: 0 32px 18px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: background .3s, border-color .3s;
+  animation: fadeSlideDown .3s ease both;
+}
+.ai-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, rgba(160,216,64,.06) 0%, transparent 60%);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .15s;
+}
+.ai-panel-header:hover { background: rgba(160,216,64,.07); }
+.ai-panel-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(160,216,64,.12);
+  border: 1px solid rgba(160,216,64,.25);
+  color: var(--accent);
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 100px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.ai-badge-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s ease infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+.ai-panel-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ai-toggle-icon {
+  font-size: 12px;
+  color: var(--muted);
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+}
+.ai-toggle-icon.open { transform: rotate(180deg); }
+
+.ai-panel-body { display: none; }
+.ai-panel-body.open { display: block; }
+
+.ai-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.ai-goal-input {
+  flex: 1;
+  min-width: 200px;
+  background: var(--surface, #141414);
+  border: 1.5px solid var(--border);
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  outline: none;
+  transition: border-color .2s;
+}
+.ai-goal-input:focus { border-color: var(--accent); }
+.ai-goal-input::placeholder { color: var(--muted); }
+.ai-ask-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 18px;
+  background: var(--accent);
+  color: #0d0d0d;
+  border: none;
+  border-radius: 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: .04em;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.ai-ask-btn:hover { filter: brightness(1.07); transform: translateY(-1px); }
+.ai-ask-btn:disabled { opacity: .55; cursor: not-allowed; transform: none; filter: none; }
+.ai-spinner {
+  width: 12px; height: 12px;
+  border: 2px solid rgba(0,0,0,.15);
+  border-top-color: #0d0d0d;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  display: none;
+}
+.ai-ask-btn.loading .ai-spinner { display: block; }
+.ai-ask-btn.loading .ai-btn-text { display: none; }
+
+/* Suggestions grid */
+.ai-suggestions {
+  padding: 16px 18px;
+  display: none;
+}
+.ai-suggestions.visible { display: block; }
+.ai-suggestions-intro {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: 'Space Mono', monospace;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ai-suggestions-intro b { color: var(--text); }
+.ai-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.ai-suggestion-card {
+  background: var(--surface, #141414);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all .18s;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+.ai-suggestion-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(160,216,64,.1);
+}
+.ai-suggestion-card.selected {
+  border-color: var(--accent);
+  background: rgba(160,216,64,.05);
+}
+.ai-suggestion-card.added {
+  border-color: var(--accent3, #60c8f0);
+  opacity: .6;
+  pointer-events: none;
+}
+.sc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.sc-emoji { font-size: 22px; line-height: 1; flex-shrink: 0; }
+.sc-add-icon {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  color: var(--muted);
+  flex-shrink: 0;
+  transition: all .15s;
+  line-height: 1;
+}
+.ai-suggestion-card:hover .sc-add-icon {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(160,216,64,.12);
+}
+.ai-suggestion-card.selected .sc-add-icon {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #0d0d0d;
+}
+.ai-suggestion-card.added .sc-add-icon {
+  border-color: var(--accent3, #60c8f0);
+  background: var(--accent3, #60c8f0);
+  color: #0d0d0d;
+}
+.sc-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+.sc-why {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+  font-family: 'Space Mono', monospace;
+}
+.sc-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.sc-cat-badge {
+  font-size: 10px;
+  font-family: 'Space Mono', monospace;
+  padding: 2px 7px;
+  border-radius: 100px;
+  border: 1px solid;
+}
+.sc-goal {
+  font-size: 10px;
+  font-family: 'Space Mono', monospace;
+  color: var(--muted);
+}
+/* Category badge colours */
+.cat-health    { color: #60f0a0; border-color: rgba(96,240,160,.3); background: rgba(96,240,160,.07); }
+.cat-study     { color: var(--accent3, #60c8f0); border-color: rgba(96,200,240,.3); background: rgba(96,200,240,.07); }
+.cat-work      { color: #f0e060; border-color: rgba(240,224,96,.3); background: rgba(240,224,96,.07); }
+.cat-discipline{ color: #f06080; border-color: rgba(240,96,128,.3); background: rgba(240,96,128,.07); }
+
+/* Add selected row */
+.ai-add-row {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding-top: 12px;
+  flex-wrap: wrap;
+}
+.ai-add-row.visible { display: flex; }
+.ai-add-selected-btn {
+  padding: 10px 20px;
+  background: var(--accent);
+  color: #0d0d0d;
+  border: none;
+  border-radius: 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: .04em;
+  transition: all .15s;
+}
+.ai-add-selected-btn:hover { filter: brightness(1.07); transform: translateY(-1px); }
+.ai-select-all-btn {
+  padding: 10px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.ai-select-all-btn:hover { border-color: var(--accent); color: var(--accent); }
+.ai-selected-count {
+  font-size: 11px;
+  font-family: 'Space Mono', monospace;
+  color: var(--muted);
+}
+/* Error / empty */
+.ai-error {
+  padding: 16px 18px;
+  font-size: 12px;
+  font-family: 'Space Mono', monospace;
+  color: var(--red, #f06060);
+  display: none;
+}
+.ai-error.visible { display: block; }
+/* Streamed typing cursor */
+.ai-cursor::after {
+  content: '▋';
+  animation: blink-cur .7s step-end infinite;
+  color: var(--accent);
+  font-size: 11px;
+}
+@keyframes blink-cur { 0%,100%{opacity:1} 50%{opacity:0} }
+@media (max-width: 768px) {
+  .ai-panel { margin-left: 14px; margin-right: 14px; }
+  .ai-cards-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .ai-cards-grid { grid-template-columns: 1fr; }
+}
+/* LOADING SKELETON */
+.skeleton{background:linear-gradient(90deg,var(--border) 25%,#333 50%,var(--border) 75%);
+  background-size:200% 100%;animation:skel 1.4s ease infinite;
+  border-radius:4px;height:14px;}
+@keyframes skel{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 18px;
+  border-radius:8px;font-size:12px;font-weight:700;
+  transform:translateY(80px);opacity:0;transition:all 0.3s;z-index:999;}
+.toast.show{transform:translateY(0);opacity:1;}
+
+/* OFFLINE BANNER */
+.offline-banner{background:rgba(240,96,96,0.1);border-bottom:1px solid rgba(240,96,96,0.2);
+  color:var(--red);font-size:12px;padding:8px 32px;text-align:center;display:none;}
+.offline-banner.show{display:block;}
+
+@media(max-width:768px){
+  nav,div.banner,div.month-row,div.week-row,div.add-row,div.table-wrap{padding-left:16px;padding-right:16px;margin-left:0;margin-right:0;}
+}
+
+/* ═══ THEME VARIABLES ═══════════════════════════════════════ */
+[data-theme="dark"] {
+  --bg:#111010 !important;
+  --paper:#111010 !important;
+  --surface:#1c1b1a !important;
+  --surface2:#252422 !important;
+  --card:#1c1b1a !important;
+  --border:#2e2c2a !important;
+  --card-border:#2e2c2a !important;
+  --cb:#2e2c2a !important;
+  --rule:#2e2c2a !important;
+  --text:#f0ece4 !important;
+  --ink:#f0ece4 !important;
+  --text2:#a09890 !important;
+  --muted:#6a6460 !important;
+  --ghost:#5a5450 !important;
+  --lime:#a0d840 !important;
+  --lime-dim:#7ab522 !important;
+  --lime-dk:#1a2e00 !important;
+  --accent:#a0d840 !important;
+  --accent2:#e09840 !important;
+  --accent3:#50a8d0 !important;
+  --cream:#252422 !important;
+  --red:#e86060 !important;
+  --sh:0 2px 16px rgba(0,0,0,.25) !important;
+  --sh-lg:0 8px 40px rgba(0,0,0,.35) !important;
+}
+[data-theme="dark"] body { background: var(--bg) !important; color: var(--ink) !important; }
+[data-theme="dark"] .card,
+[data-theme="dark"] .sec,
+[data-theme="dark"] .full-card,
+[data-theme="dark"] .section-card,
+[data-theme="dark"] .week-card,
+[data-theme="dark"] .wcard,
+[data-theme="dark"] .stat-card { background: var(--card) !important; border-color: var(--border) !important; }
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select { background: #252422 !important; border-color: #3a3835 !important; color: var(--ink) !important; }
+[data-theme="dark"] nav { background: #161514 !important; border-color: var(--border) !important; }
+[data-theme="dark"] .banner { background: var(--card) !important; border-color: var(--border) !important; }
+[data-theme="dark"] .hero { background: #0a0a0a !important; }
+[data-theme="dark"] .bw.best { background: #1a2e00 !important; }
+[data-theme="dark"] .bw.worst { background: #2e0a0a !important; border-color: #5a2020 !important; }
+[data-theme="dark"] .lb-row { border-color: #2e2c2a !important; }
+[data-theme="dark"] .ins, [data-theme="dark"] .insight { background: #252422 !important; }
+[data-theme="dark"] .tbl th { background: #161514 !important; }
+[data-theme="dark"] .tbl td, [data-theme="dark"] .tbl tr { border-color: #2e2c2a !important; }
+[data-theme="dark"] .day-btn:hover { background: rgba(160,216,64,.08) !important; }
+[data-theme="dark"] .day-btn.weekend { background: rgba(255,255,255,.02) !important; }
+[data-theme="dark"] .add-input, [data-theme="dark"] .goal-inp, [data-theme="dark"] .cat-sel { background: #1c1b1a !important; border-color: #2e2c2a !important; }
+[data-theme="dark"] .week-row .wcard { background: #1c1b1a !important; }
+[data-theme="dark"] .card-accent-lime { background: #1a2e00 !important; }
+[data-theme="dark"] .tabs { background: #161514 !important; }
+[data-theme="dark"] .tab.active { background: var(--accent) !important; color: #0a0a0a !important; }
+[data-theme="dark"] .btn-google { border-color: #3a3835 !important; color: var(--ink) !important; }
+[data-theme="dark"] .msg.success { background: rgba(160,216,64,.1) !important; border-color: rgba(160,216,64,.3) !important; }
+[data-theme="dark"] .score-hero, [data-theme="dark"] .hero { border: 1px solid #2e2c2a; }
+[data-theme="dark"] .sc-day { transition: transform .1s; }
+/* ═══════════════════════════════════════════════════════════ */
+
+/* ═══ AI FEATURE ADDITIONS ═══════════════════════════════════
+
+   Recent goal chips, history panel, explain modal, refinement
+═══════════════════════════════════════════════════════════ */
+
+/* Recent goals row */
+.ai-recent-row {
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap; margin-top: 12px;
+  min-height: 0;
+}
+.ai-recent-label {
+  font-family: 'Space Mono', monospace; font-size: 10px;
+  color: var(--muted); text-transform: uppercase; letter-spacing: .08em;
+  flex-shrink: 0;
+}
+.ai-goal-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--card); border: 1px solid var(--border);
+  color: var(--muted); padding: 5px 11px;
+  border-radius: 100px; font-size: 11px;
+  font-family: 'Space Mono', monospace;
+  cursor: pointer; transition: all .15s;
+  white-space: nowrap; max-width: 160px;
+  overflow: hidden; text-overflow: ellipsis;
+  -webkit-tap-highlight-color: transparent;
+}
+.ai-goal-chip:hover {
+  border-color: var(--accent); color: var(--text);
+  background: rgba(160,216,64,.06);
+}
+.ai-goal-chip-x {
+  font-size: 10px; opacity: .5; cursor: pointer;
+  flex-shrink: 0; padding: 0 2px;
+}
+.ai-goal-chip-x:hover { opacity: 1; color: var(--red); }
+
+/* Refine / regenerate row */
+.ai-refine-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 14px; flex-wrap: wrap;
+}
+.ai-refine-btn {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--muted); padding: 6px 13px;
+  border-radius: 8px; font-family: 'Space Mono', monospace;
+  font-size: 11px; cursor: pointer; transition: all .15s;
+}
+.ai-refine-btn:hover { border-color: var(--accent); color: var(--accent); }
+.ai-refine-input {
+  flex: 1; min-width: 140px; background: var(--surface);
+  border: 1px solid var(--border); color: var(--text);
+  font-family: 'Space Mono', monospace; font-size: 12px;
+  padding: 7px 12px; border-radius: 8px; outline: none;
+  transition: border-color .2s;
+}
+.ai-refine-input:focus { border-color: var(--accent); }
+.ai-refine-input::placeholder { color: var(--muted); }
+
+/* Explain card modal */
+#ai-explain-backdrop {
+  position: fixed; inset: 0; z-index: 8000;
+  background: rgba(0,0,0,.6); backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+  padding: 20px;
+}
+#ai-explain-backdrop.open { display: flex; }
+#ai-explain-modal {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 28px;
+  max-width: 420px; width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  position: relative; animation: popIn .3s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes popIn {
+  from { opacity:0; transform:scale(.92) translateY(12px); }
+  to   { opacity:1; transform:none; }
+}
+.ai-exp-header {
+  display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px;
+}
+.ai-exp-emoji { font-size: 28px; line-height: 1; }
+.ai-exp-name {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 17px; color: var(--text); line-height: 1.2;
+}
+.ai-exp-cat {
+  font-size: 11px; font-family: 'Space Mono', monospace;
+  color: var(--muted); margin-top: 3px; text-transform: uppercase;
+}
+.ai-exp-why {
+  font-size: 13px; color: var(--muted); line-height: 1.6;
+  margin-bottom: 14px; padding: 12px 14px;
+  background: var(--surface); border-radius: 8px;
+  border-left: 3px solid var(--accent);
+}
+.ai-exp-science {
+  font-size: 13px; color: var(--text2, var(--muted)); line-height: 1.6;
+  margin-bottom: 16px;
+}
+.ai-exp-science b { color: var(--text); }
+.ai-exp-tip {
+  font-size: 12px; color: var(--muted); font-family: 'Space Mono', monospace;
+  background: var(--surface); border-radius: 8px; padding: 10px 12px;
+  border: 1px solid var(--border); margin-bottom: 16px;
+}
+.ai-exp-actions { display: flex; gap: 8px; }
+.ai-exp-add-btn {
+  flex: 1; background: var(--accent); color: #0d0d0d;
+  border: none; padding: 11px; border-radius: 8px;
+  font-family: 'Space Mono', monospace; font-size: 12px;
+  font-weight: 700; cursor: pointer; transition: filter .15s;
+}
+.ai-exp-add-btn:hover { filter: brightness(1.08); }
+.ai-exp-close-btn {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--muted); padding: 11px 16px; border-radius: 8px;
+  font-family: 'Space Mono', monospace; font-size: 12px;
+  cursor: pointer; transition: all .15s;
+}
+.ai-exp-close-btn:hover { border-color: var(--muted); color: var(--text); }
+
+/* History panel */
+.ai-history-section {
+  margin-top: 18px; border-top: 1px solid var(--border); padding-top: 16px;
+  display: none;
+}
+.ai-history-section.visible { display: block; }
+.ai-history-title {
+  font-family: 'Space Mono', monospace; font-size: 10px;
+  color: var(--muted); text-transform: uppercase; letter-spacing: .1em;
+  margin-bottom: 10px; display: flex; align-items: center;
+  justify-content: space-between;
+}
+.ai-history-clear {
+  background: none; border: none; color: var(--muted);
+  font-family: 'Space Mono', monospace; font-size: 10px;
+  cursor: pointer; text-decoration: underline; padding: 0;
+}
+.ai-history-clear:hover { color: var(--red); }
+.ai-history-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; background: var(--surface);
+  border-radius: 8px; margin-bottom: 6px; cursor: pointer;
+  border: 1px solid transparent; transition: all .15s;
+}
+.ai-history-item:hover { border-color: var(--border); background: var(--card); }
+.ai-history-goal {
+  flex: 1; font-size: 13px; color: var(--text); overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.ai-history-meta {
+  font-family: 'Space Mono', monospace; font-size: 10px;
+  color: var(--muted); flex-shrink: 0;
+}
+.ai-history-added {
+  font-size: 11px; color: var(--accent); flex-shrink: 0;
+}
+
+/* Explain button on each card */
+.sc-explain-btn {
+  position: absolute; bottom: 8px; right: 8px;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--muted); padding: 3px 8px;
+  border-radius: 6px; font-family: 'Space Mono', monospace;
+  font-size: 9px; cursor: pointer; opacity: 0;
+  transition: all .15s;
+}
+.ai-suggestion-card:hover .sc-explain-btn { opacity: 1; }
+.sc-explain-btn:hover { border-color: var(--accent); color: var(--accent); }
+.ai-suggestion-card { position: relative; }
+
+/* Science citation pill */
+.ai-exp-source {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--accent-bg, rgba(160,216,64,.1));
+  border: 1px solid rgba(160,216,64,.2); color: var(--accent);
+  padding: 3px 9px; border-radius: 100px;
+  font-family: 'Space Mono', monospace; font-size: 10px;
+  margin-bottom: 12px;
+}
+
+/* ─────────────────────────────────────────────────────────── */
+</style>
+<script src="theme.js"></script>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)"><meta name="theme-color" content="#f5f2eb" media="(prefers-color-scheme: light)">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Habits"><meta name="mobile-web-app-capable" content="yes">
+</head>
+<body>
+
+<div class="offline-banner" id="offlineBanner">
+  ⚠ You're offline. Changes will sync when connection is restored.
+</div>
+
+<nav>
+  <div class="nav-logo">★ <span>HABIT</span>TRACKER</div>
+  <div class="nav-right">
+    <div class="sync-badge syncing" id="syncBadge">
+      <div class="sync-dot spinning" id="syncDot"></div>
+      <span id="syncLabel">Connecting...</span>
+    </div>
+    <a href="profile.html" class="nav-avatar" id="navAvatar">U</a>
+    <button
+  data-theme-btn
+  onclick="ThemeManager.toggle(); this.textContent=ThemeManager.getCurrent()==='dark'?'☀️  Light':'🌙  Dark';"
+  title="Toggle theme (Ctrl+Shift+L)"
+  style="background:transparent;border:1px solid rgba(128,128,128,.3);
+    color:inherit;padding:6px 12px;border-radius:8px;
+    font-family:inherit;font-size:12px;cursor:pointer;
+    transition:all .15s;display:flex;align-items:center;gap:6px;white-space:nowrap;"
+  id="themeBtn">🌙  Dark</button>
+    <a href="notifications.html" style="background:transparent;border:1px solid rgba(128,128,128,.3);color:inherit;padding:6px 12px;border-radius:8px;font-family:'DM Mono',monospace;font-size:12px;text-decoration:none;transition:all .15s;">🔔 Reminders</a>
+    <button class="btn-sm" onclick="signOut()">Sign Out</button>
+  </div>
+</nav>
+
+<div class="banner">
+  <div class="pstat">
+    <div class="plbl">Global Progress</div>
+    <div class="pval" id="gFrac">0/0</div>
+  </div>
+  <div class="pstat">
+    <div class="plbl">Completion</div>
+    <div class="pval" id="gPct">0%</div>
+  </div>
+  <div class="pbar-wrap">
+    <div class="plbl">Monthly Overview</div>
+    <div class="pbar-bg"><div class="pbar-fill" id="gBar" style="width:0%"></div></div>
+    <div class="pbar-lbl" id="gLbl">Loading...</div>
+  </div>
+  <div class="donut-wrap">
+    <svg class="donut-svg" width="72" height="72" viewBox="0 0 72 72">
+      <circle class="donut-bg" cx="36" cy="36" r="26"/>
+      <circle class="donut-fg" id="donutFg" cx="36" cy="36" r="26"
+        stroke-dasharray="163.4" stroke-dashoffset="163.4"/>
+    </svg>
+    <div class="donut-pct" id="donutPct">0%</div>
+  </div>
+</div>
+
+<div class="month-row">
+  <button class="mnav-btn" onclick="changeMonth(-1)">‹</button>
+  <div class="mlabel" id="monthLabel">Loading...</div>
+  <button class="mnav-btn" onclick="changeMonth(1)">›</button>
+</div>
+
+<div class="week-row" id="weekRow"></div>
+
+
+<!-- ═══ SEARCH & FILTER BAR ═══════════════════════════════ -->
+<div class="search-filter-row">
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="searchInput"
+      placeholder="Search habits..."
+      oninput="onSearchInput(this.value)"
+      onkeydown="if(event.key==='Escape'){clearSearch();}"
+      autocomplete="off" spellcheck="false" />
+    <button class="search-clear" id="searchClear" onclick="clearSearch()" title="Clear">✕</button>
+  </div>
+
+  <div class="filter-chips">
+    <button class="fchip active" data-cat="all"         onclick="setCategory('all')">All</button>
+    <button class="fchip"        data-cat="health"      onclick="setCategory('health')">
+      <span class="fchip-dot" style="background:#60f0a0"></span>Health
+    </button>
+    <button class="fchip"        data-cat="study"       onclick="setCategory('study')">
+      <span class="fchip-dot" style="background:#60c8f0"></span>Study
+    </button>
+    <button class="fchip"        data-cat="work"        onclick="setCategory('work')">
+      <span class="fchip-dot" style="background:#f0e060"></span>Work
+    </button>
+    <button class="fchip"        data-cat="discipline"  onclick="setCategory('discipline')">
+      <span class="fchip-dot" style="background:#f06080"></span>Discipline
+    </button>
+  </div>
+</div>
+
+<!-- Status + sort row -->
+<div class="status-row">
+  <button class="status-chip active" data-status="all"        onclick="setStatus('all')">All habits</button>
+  <button class="status-chip"        data-status="completed"  onclick="setStatus('completed')">✅ Completed today</button>
+  <button class="status-chip"        data-status="incomplete" onclick="setStatus('incomplete')">⭕ Incomplete today</button>
+  <button class="status-chip"        data-status="streak"     onclick="setStatus('streak')">🔥 On streak</button>
+
+  <button class="sort-btn" id="sortBtn" onclick="cycleSort()" title="Sort">
+    ↕ <span id="sortLabel">Default</span>
+  </button>
+
+  <span class="results-count" id="resultsCount"></span>
+</div>
+
+<!-- Active filter tags strip -->
+<div class="active-filters-strip" id="activeFiltersStrip">
+  <span>Filters:</span>
+  <span id="afTags"></span>
+  <button class="af-clear-all" onclick="clearAllFilters()">Clear all</button>
+</div>
+<!-- ═════════════════════════════════════════════════════ -->
+
+
+<!-- ═══ AI HABIT SUGGESTION PANEL ════════════════════════════ -->
+<div class="ai-panel" id="aiPanel">
+  <div class="ai-panel-header" onclick="AISuggest.toggle()" aria-expanded="false" id="aiPanelHeader">
+    <div class="ai-panel-title">
+      <span class="ai-panel-badge"><span class="ai-badge-dot"></span>AI</span>
+      Habit Suggestions
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;">
+        Tell me your goal →
+      </span>
+      <div class="ai-toggle-icon" id="aiToggleIcon">▼</div>
+    </div>
+  </div>
+
+  <div class="ai-panel-body" id="aiPanelBody">
+    <div class="ai-input-row">
+      <input class="ai-goal-input" id="aiGoalInput"
+        placeholder='e.g. "I want to lose weight" or "Crack placement"'
+        maxlength="200"
+        onkeydown="if(event.key==='Enter')AISuggest.ask()"
+        autocomplete="off" spellcheck="false"/>
+      <button class="ai-ask-btn" id="aiAskBtn" onclick="AISuggest.ask()">
+        <div class="ai-spinner"></div>
+        <span class="ai-btn-text">✦ Suggest Habits</span>
+      </button>
+    </div>
+
+    <!-- Recent goals quick-pick -->
+    <div class="ai-recent-row" id="aiRecentRow" style="display:none">
+      <span class="ai-recent-label">Recent:</span>
+      <div id="aiRecentChips" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+    </div>
+
+    <!-- Refine prompt row (shown after suggestions load) -->
+    <div class="ai-refine-row" id="aiRefineRow" style="display:none">
+      <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);">Refine:</span>
+      <input class="ai-refine-input" id="aiRefineInput"
+        placeholder='e.g. "make it easier" or "more study habits"'
+        onkeydown="if(event.key==='Enter')AISuggest.refine()"
+        maxlength="120" />
+      <button class="ai-refine-btn" onclick="AISuggest.refine()">✦ Refine</button>
+      <button class="ai-refine-btn" onclick="AISuggest.regenerate()">↺ Redo</button>
+    </div>
+
+    <div class="ai-error" id="aiError"></div>
+
+    <div class="ai-suggestions" id="aiSuggestions">
+      <div class="ai-suggestions-intro">
+        <span>✦</span>
+        <span>Suggestions for: <b id="aiGoalLabel">—</b></span>
+      </div>
+      <div class="ai-cards-grid" id="aiCardsGrid"></div>
+      <div class="ai-add-row" id="aiAddRow">
+        <button class="ai-add-selected-btn" onclick="AISuggest.addSelected()">
+          + Add Selected to Tracker
+        </button>
+        <button class="ai-select-all-btn" onclick="AISuggest.selectAll()">Select All</button>
+        <span class="ai-selected-count" id="aiSelectedCount"></span>
+      </div>
+    </div>
+  </div>
+
+
+    <!-- Session history -->
+    <div class="ai-history-section" id="aiHistorySection">
+      <div class="ai-history-title">
+        <span>Past Goals</span>
+        <button class="ai-history-clear" onclick="AISuggest.clearHistory()">Clear history</button>
+      </div>
+      <div id="aiHistoryList"></div>
+    </div>
+
+</div>
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<div class="add-row">
+  <input class="add-input" id="habitInput" placeholder="New habit name..."
+    onkeydown="if(event.key==='Enter')addHabit()"/>
+  <input class="goal-inp" id="goalInput" type="number" value="1" min="1" max="5"/>
+  <select class="cat-sel" id="catSel">
+    <option value="health">🏃 Health</option>
+    <option value="study">📚 Study</option>
+    <option value="work">💼 Work</option>
+    <option value="discipline">🔥 Discipline</option>
+  </select>
+  <button class="btn-add" id="btnAdd" onclick="addHabit()">+ ADD HABIT</button>
+</div>
+
+<div class="table-wrap">
+  <div class="table-scroll">
+    <table class="tbl" id="tbl">
+      <thead id="thead"></thead>
+      <tbody id="tbody">
+        <tr><td colspan="35" style="padding:40px;text-align:center;color:var(--muted);">
+          <div class="skeleton" style="width:60%;margin:0 auto 12px;"></div>
+          <div class="skeleton" style="width:40%;margin:0 auto;"></div>
+        </td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+
+// ════════════════════════════════════════════════════════════
+//  NOTE SYSTEM
+//
+//  Data structure (Firestore + localStorage mirror):
+//
+//  users/{uid}/notes/{noteId}  ← cloud
+//  localStorage['ht_notes_v1'] ← offline cache
+//
+//  Note document schema:
+//  {
+//    id:        string,          // "habitId_YYYY-MM-DD"
+//    habitId:   string,          // e.g. "h5"
+//    date:      string,          // "2026-05-14"  (doc ID)
+//    text:      string,          // free text ≤500 chars
+//    mood:      string|null,     // emoji or null
+//    tags:      string[],        // ["win","insight"]
+//    updatedAt: ISO string,
+//    uid:       string,
+//  }
+//
+//  Key design decisions:
+//  • Doc ID = habitId + "_" + date  →  O(1) lookup, no queries needed
+//  • Stored in a flat 'notes' subcollection (not inside checks)
+//    so notes never interfere with check-in data structure
+//  • Local mirror in localStorage so notes load instantly offline
+//  • Modal is single instance (reused), not re-created each open
+// ════════════════════════════════════════════════════════════
+
+const NOTES_KEY = 'ht_notes_v1';
+
+// In-memory note cache:  { docId: NoteDoc }
+let notesCache = {};
+
+// ── Load notes from localStorage on startup ─────────────────
+function loadNotesFromStorage() {
+  try {
+    const raw = localStorage.getItem(NOTES_KEY);
+    if (raw) notesCache = JSON.parse(raw);
+  } catch {}
+}
+
+function saveNotesToStorage() {
+  try { localStorage.setItem(NOTES_KEY, JSON.stringify(notesCache)); } catch {}
+}
+
+// ── Note document key ───────────────────────────────────────
+function noteKey(habitId, dateStr) { return `${habitId}_${dateStr}`; }
+
+function getNote(habitId, ds) { return notesCache[noteKey(habitId, ds)] || null; }
+
+function hasNote(habitId, ds) {
+  const n = getNote(habitId, ds);
+  return !!(n && (n.text || n.mood || (n.tags && n.tags.length)));
+}
+
+// ── Firestore sync (non-blocking) ───────────────────────────
+async function syncNoteToFirestore(note) {
+  if (!uid || !db) return;
+  try {
+    // localStorage
+  } catch (e) { /* Will retry on next load */ }
+}
+
+async function deleteNoteFromFirestore(docId) {
+  if (!uid || !db) return;
+  try {
+    // localStorage
+  } catch {}
+}
+
+// Load all notes for current month from Firestore once
+async function loadNotesFromFirestore(y, m) {
+  if (!uid || !db) return;
+  const prefix = `${y}-${String(m+1).padStart(2,'0')}`;
+  try {
+    const snap = // localStorage
+    snap.docs.forEach(d => { notesCache[d.id] = d.data(); });
+    saveNotesToStorage();
+    renderAll(); // refresh dots
+  } catch {}
+}
+
+// ── NoteSystem — all UI logic ────────────────────────────────
+const NoteSystem = (() => {
+  let _habitId  = null;
+  let _dateStr  = null;
+  let _mood     = null;
+  let _tags     = [];
+  let _ctxAction = null;
+  let _longPressTimer = null;
+
+  const MONTH_NAMES_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  // ── Open modal ─────────────────────────────────────────────
+  function open(habitId, ds, focusMode = 'note') {
+    _habitId = habitId;
+    _dateStr = ds;
+
+    const habit  = habits.find(h => h.id === habitId) || { emoji:'📝', name:'Habit' };
+    const note   = getNote(habitId, ds);
+    const [y, m, d] = ds.split('-').map(Number);
+    const dateObj = new Date(y, m-1, d);
+    const dow     = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dateObj.getDay()];
+
+    // Populate header
+    document.getElementById('modal-emoji').textContent        = habit.emoji || '📝';
+    document.getElementById('modal-habit-name').textContent   = habit.name;
+    document.getElementById('modal-date-label').textContent   = `${dow}, ${MONTH_NAMES_SHORT[m-1]} ${d}, ${y}`;
+
+    // Populate fields
+    _mood = note?.mood || null;
+    _tags = note?.tags ? [...note.tags] : [];
+    const textarea = document.getElementById('note-textarea');
+    textarea.value = note?.text || '';
+    updateCharCount(textarea.value.length);
+
+    // Mood chips
+    document.querySelectorAll('.mood-chip').forEach(c =>
+      c.classList.toggle('selected', c.dataset.mood === _mood));
+
+    // Tag chips
+    document.querySelectorAll('.note-tag').forEach(t =>
+      t.classList.toggle('on', _tags.includes(t.dataset.tag)));
+
+    // Delete button
+    document.getElementById('btn-del-note').style.display = note ? 'block' : 'none';
+
+    // Past notes history
+    renderHistory(habitId, ds);
+
+    // Show modal
+    document.getElementById('note-modal-backdrop').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    if (focusMode === 'note') {
+      setTimeout(() => textarea.focus(), 120);
+    }
+  }
+
+  // ── Close modal ────────────────────────────────────────────
+  function close() {
+    const bd = document.getElementById('note-modal-backdrop');
+    bd.style.animation = 'none';
+    bd.style.opacity   = '0';
+    setTimeout(() => {
+      bd.style.display   = 'none';
+      bd.style.animation = '';
+      bd.style.opacity   = '';
+    }, 180);
+    document.body.style.overflow = '';
+    _habitId = _dateStr = null;
+  }
+
+  function closeIfBackdrop(e) {
+    if (e.target === document.getElementById('note-modal-backdrop')) close();
+  }
+
+  // ── Mood ───────────────────────────────────────────────────
+  function setMood(emoji) {
+    _mood = _mood === emoji ? null : emoji;
+    document.querySelectorAll('.mood-chip').forEach(c =>
+      c.classList.toggle('selected', c.dataset.mood === _mood));
+  }
+
+  // ── Tags ───────────────────────────────────────────────────
+  function toggleTag(tag) {
+    const idx = _tags.indexOf(tag);
+    if (idx >= 0) _tags.splice(idx, 1); else _tags.push(tag);
+    document.querySelectorAll('.note-tag').forEach(t =>
+      t.classList.toggle('on', _tags.includes(t.dataset.tag)));
+  }
+
+  // ── Char counter ───────────────────────────────────────────
+  function onTextInput(el) { updateCharCount(el.value.length); }
+  function updateCharCount(n) {
+    const el = document.getElementById('note-char-count');
+    el.textContent = `${n}/500`;
+    el.classList.toggle('warn', n > 420);
+  }
+
+  // ── Save ───────────────────────────────────────────────────
+  async function save() {
+    if (!_habitId || !_dateStr) return;
+    const text = document.getElementById('note-textarea').value.trim();
+    if (!text && !_mood && !_tags.length) {
+      deleteNote(); return; // nothing to save → clean up
+    }
+
+    const docId = noteKey(_habitId, _dateStr);
+    const note  = {
+      id:        docId,
+      habitId:   _habitId,
+      date:      _dateStr,
+      text,
+      mood:      _mood,
+      tags:      [..._tags],
+      updatedAt: new Date().toISOString(),
+      uid:       uid || 'local',
+    };
+
+    notesCache[docId] = note;
+    saveNotesToStorage();
+    syncNoteToFirestore(note); // fire-and-forget
+
+    close();
+    renderAll(); // refresh note dots
+    showToast(`📝 Note saved! ${text ? text.slice(0,40) + (text.length>40?'…':'') : ''}`, 'accent');
+  }
+
+  // ── Delete ─────────────────────────────────────────────────
+  function deleteNote() {
+    if (!_habitId || !_dateStr) return;
+    const docId = noteKey(_habitId, _dateStr);
+    if (notesCache[docId]) {
+      delete notesCache[docId];
+      saveNotesToStorage();
+      deleteNoteFromFirestore(docId);
+    }
+    close();
+    renderAll();
+    showToast('🗑 Note deleted', 'muted');
+  }
+
+  // ── History panel ───────────────────────────────────────────
+  function renderHistory(habitId, currentDate) {
+    const container = document.getElementById('note-history-list');
+    const section   = document.getElementById('note-history-section');
+
+    // All notes for this habit, sorted newest first
+    const past = Object.values(notesCache)
+      .filter(n => n.habitId === habitId && n.date !== currentDate && n.text)
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 5);
+
+    if (!past.length) {
+      section.style.display = 'none'; return;
+    }
+    section.style.display = 'block';
+
+    container.innerHTML = past.map(n => {
+      const [y, m, d] = n.date.split('-').map(Number);
+      const dateLabel = `${MONTH_NAMES_SHORT[m-1]} ${d}`;
+      const tagHtml   = n.tags?.map(t => `<span class="nhi-tag">${t}</span>`).join('') || '';
+      return `<div class="note-hist-item" onclick="NoteSystem.jumpTo('${n.habitId}','${n.date}')">
+        <div class="nhi-header">
+          <span class="nhi-date">${dateLabel}</span>
+          <span class="nhi-mood">${n.mood || ''}</span>
+          <div class="nhi-tags">${tagHtml}</div>
+        </div>
+        <div class="nhi-text">${escapeHtml(n.text)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Jump to a past date's note
+  function jumpTo(habitId, ds) {
+    close();
+    setTimeout(() => open(habitId, ds), 220);
+  }
+
+  // ── Context menu ────────────────────────────────────────────
+  let _ctxHabitId = null, _ctxDateStr = null;
+
+  function showCtxMenu(habitId, ds, x, y) {
+    _ctxHabitId = habitId;
+    _ctxDateStr = ds;
+    const menu  = document.getElementById('note-ctx-menu');
+    const note  = getNote(habitId, ds);
+
+    // Show/hide delete item
+    menu.querySelector('.ctx-item.danger').style.display = note ? 'flex' : 'none';
+
+    menu.style.display = 'block';
+    menu.style.left    = Math.min(x, window.innerWidth  - 180) + 'px';
+    menu.style.top     = Math.min(y, window.innerHeight - 160) + 'px';
+
+    // Close on next outside click
+    setTimeout(() => {
+      document.addEventListener('click', hideCtxMenu, { once: true });
+    }, 0);
+  }
+
+  function hideCtxMenu() {
+    document.getElementById('note-ctx-menu').style.display = 'none';
+  }
+
+  function openFromCtx(action) {
+    hideCtxMenu();
+    if (!_ctxHabitId || !_ctxDateStr) return;
+    if (action === 'check') {
+      // Simulate a toggle — find the button and call toggleCheck
+      const btn = document.querySelector(
+        `button.day-btn[data-habit="${_ctxHabitId}"][data-date="${_ctxDateStr}"]`
+      );
+      if (btn) toggleCheck(_ctxHabitId, _ctxDateStr, btn);
+      else { checks[_ctxDateStr] = checks[_ctxDateStr] || {}; checks[_ctxDateStr][_ctxHabitId] = !checks[_ctxDateStr][_ctxHabitId]; renderAll(); }
+    } else if (action === 'note' || action === 'history') {
+      open(_ctxHabitId, _ctxDateStr, 'note');
+    } else if (action === 'delete') {
+      _habitId = _ctxHabitId; _dateStr = _ctxDateStr;
+      deleteNote();
+    }
+  }
+
+  // ── Long press (mobile) ─────────────────────────────────────
+  function onTouchStart(habitId, ds, e) {
+    _longPressTimer = setTimeout(() => {
+      e.preventDefault();
+      const t = e.touches[0];
+      showCtxMenu(habitId, ds, t.clientX, t.clientY);
+    }, 550);
+  }
+
+  function onTouchEnd() {
+    clearTimeout(_longPressTimer);
+  }
+
+  // ── Public API ──────────────────────────────────────────────
+  return { open, close, closeIfBackdrop, setMood, toggleTag, onTextInput,
+           save, deleteNote, renderHistory, jumpTo,
+           showCtxMenu, hideCtxMenu, openFromCtx,
+           onTouchStart, onTouchEnd };
+})();
+
+function escapeHtml(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Close modal on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const bd = document.getElementById('note-modal-backdrop');
+    if (bd && bd.style.display !== 'none') NoteSystem.close();
+    const ctx = document.getElementById('note-ctx-menu');
+    if (ctx && ctx.style.display !== 'none') NoteSystem.hideCtxMenu();
+  }
+});
+
+// ── Init notes on app start ──────────────────────────────────
+loadNotesFromStorage();
+
+// ── AUTH GUARD + STATE ────────────────────────────────────────
+const SESSION_KEY = 'ht_session_v1';
+
+(function() {
+  const session = localStorage.getItem(SESSION_KEY);
+  if (!session) { window.location.href = 'auth.html'; return; }
+  try {
+    const user = JSON.parse(session);
+    const av = document.getElementById('navAvatar');
+    if (av) av.textContent = user.initials || (user.name ? user.name.slice(0,2).toUpperCase() : 'U');
+    const navName = document.getElementById('navName');
+    if (navName) navName.textContent = user.name ? user.name.split(' ')[0] : 'Profile';
+  } catch(e) { window.location.href = 'auth.html'; }
+})();
+
+// ── State ─────────────────────────────────────────────────────
+let habits     = [];           // [{id, name, emoji, goal, category, order}]
+let checks     = {};           // { 'YYYY-MM-DD': { h1:true, h2:false, … } }
+let viewYear   = new Date().getFullYear();
+let viewMonth  = new Date().getMonth();
+
+// Load habits from localStorage
+function loadHabitsLocal() {
+  try {
+    const st = JSON.parse(localStorage.getItem('habittracker_v3'));
+    if (st && st.habits) {
+      habits = st.habits;
+      checks = {};
+      Object.keys(st.checks || {}).forEach(k => {
+        const p = k.split('_');
+        if (p.length === 4) {
+          const dk = p[1] + '-' + String(Number(p[2])+1).padStart(2,'0') + '-' + String(p[3]).padStart(2,'0');
+          if (!checks[dk]) checks[dk] = {};
+          checks[dk][p[0]] = st.checks[k];
+        }
+      });
+    }
+  } catch(e) {}
+  renderAll();
+  setSyncStatus('synced', 'Local');
+}
+
+loadHabitsLocal();
+
+// ── Offline detection ─────────────────────────────────────────
+window.addEventListener('online',  () => document.getElementById('offlineBanner').classList.remove('show'));
+window.addEventListener('offline', () => document.getElementById('offlineBanner').classList.add('show'));
+
+// ── Firestore real-time listeners ─────────────────────────────
+function subscribeHabits() { /* using localStorage */ }
+
+function subscribeChecks() { /* using localStorage */ }
+
+// ── Toggle a day check ────────────────────────────────────────
+function toggleCheck(habitId, dateStr, btnEl) {
+  if (!checks[dateStr]) checks[dateStr] = {};
+  checks[dateStr][habitId] = !checks[dateStr][habitId];
+  saveToLocalStorage();
+  renderAll();
+  showToast(checks[dateStr][habitId] ? '✓ Logged!' : 'Unchecked', checks[dateStr][habitId] ? 'accent' : 'muted');
+}
+
+// ── Add habit ─────────────────────────────────────────────────
+function addHabit() {
+  const name = document.getElementById('habitInput').value.trim();
+  const goal = parseInt(document.getElementById('goalInput').value) || 1;
+  const cat  = document.getElementById('catSel').value;
+  if (!name) { document.getElementById('habitInput').focus(); return; }
+  const emojis = { health:'💪', study:'📚', work:'💼', discipline:'🔥' };
+  const newHabit = {
+    id: 'h_' + Date.now(), name, goal, category: cat,
+    emoji: emojis[cat] || '●', order: habits.length
+  };
+  habits.push(newHabit);
+  document.getElementById('habitInput').value = '';
+  saveToLocalStorage();
+  renderAll();
+  showToast('Habit added! ✅');
+}
+
+// ── Delete habit ──────────────────────────────────────────────
+function deleteHabit(id, name) {
+  if (!confirm('Remove "' + name + '"?')) return;
+  habits = habits.filter(h => h.id !== id);
+  saveToLocalStorage();
+  renderAll();
+  showToast('Habit deleted.');
+}
+
+// ── Month navigation ──────────────────────────────────────────
+function changeMonth(delta) {
+  viewMonth += delta;
+  if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+  if (viewMonth < 0)  { viewMonth = 11; viewYear--; }
+  checks = {};                 // clear local cache
+  if (unsubChecks) unsubChecks();
+  subscribeChecks();
+  loadNotesFromFirestore(viewMonth < 0 ? viewYear : viewYear, viewMonth < 0 ? 11 : viewMonth);
+  renderAll();
+}
+
+// ── Date helpers ──────────────────────────────────────────────
+const MONTHS = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE',
+                'JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
+const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function daysInMonth(y, m) { return new Date(y, m+1, 0).getDate(); }
+function isWeekend(y, m, d) { const w = new Date(y,m,d).getDay(); return w===0||w===6; }
+function isToday(y, m, d)   {
+  const t = new Date();
+  return t.getFullYear()===y && t.getMonth()===m && t.getDate()===d;
+}
+function dateStr(y, m, d)   {
+  return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+function weekOf(d, y, m)    {
+  const first = new Date(y, m, 1).getDay();
+  return Math.ceil((d + first) / 7);
+}
+
+// ── Stats ─────────────────────────────────────────────────────
+function isChecked(habitId, y, m, d) {
+  return !!(checks[dateStr(y,m,d)] && checks[dateStr(y,m,d)][habitId]);
+}
+
+function habitStats(id, y, m) {
+  const total = daysInMonth(y, m);
+  const habit = habits.find(h => h.id === id);
+  const goal  = (habit?.goal || 1) * total;
+  let done = 0;
+  for (let d = 1; d <= total; d++) if (isChecked(id, y, m, d)) done++;
+  return { done, goal, left: Math.max(0, goal-done),
+           pct: goal > 0 ? Math.round((done/goal)*100) : 0 };
+}
+
+function weekStats(weekNum, y, m) {
+  const total = daysInMonth(y, m);
+  let done = 0, goal = 0;
+  for (let d = 1; d <= total; d++) {
+    if (weekOf(d,y,m) !== weekNum) continue;
+    habits.forEach(h => {
+      if (isChecked(h.id,y,m,d)) done++;
+      goal += h.goal;
+    });
+  }
+  return { done, goal, left: Math.max(0,goal-done),
+           pct: goal>0 ? Math.round((done/goal)*100) : 0 };
+}
+
+function globalStats(y, m) {
+  const total = daysInMonth(y, m);
+  let done = 0;
+  const goal = habits.reduce((s,h) => s + h.goal*total, 0);
+  habits.forEach(h => {
+    for (let d=1; d<=total; d++) if (isChecked(h.id,y,m,d)) done++;
+  });
+  return { done, goal, pct: goal>0 ? Math.round((done/goal)*100) : 0 };
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  SEARCH & FILTER STATE
+// ═══════════════════════════════════════════════════════════
+let filterQuery    = '';
+let filterCategory = 'all';
+let filterStatus   = 'all';
+let sortMode       = 'default';   // 'default' | 'pct-desc' | 'pct-asc' | 'name' | 'streak'
+
+const SORT_MODES  = ['default','pct-desc','pct-asc','name','streak'];
+const SORT_LABELS = { default:'Default', 'pct-desc':'% High→Low', 'pct-asc':'% Low→High', name:'A→Z', streak:'Streak' };
+
+// ── User actions ────────────────────────────────────────────
+function onSearchInput(val) {
+  filterQuery = val.trim().toLowerCase();
+  document.getElementById('searchClear').classList.toggle('visible', filterQuery.length > 0);
+  applyFilters();
+}
+
+function clearSearch() {
+  filterQuery = '';
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchClear').classList.remove('visible');
+  applyFilters();
+}
+
+function setCategory(cat) {
+  filterCategory = cat;
+  document.querySelectorAll('.fchip').forEach(c => c.classList.toggle('active', c.dataset.cat === cat));
+  applyFilters();
+}
+
+function setStatus(status) {
+  filterStatus = status;
+  document.querySelectorAll('.status-chip').forEach(c => c.classList.toggle('active', c.dataset.status === status));
+  applyFilters();
+}
+
+function cycleSort() {
+  const idx = SORT_MODES.indexOf(sortMode);
+  sortMode = SORT_MODES[(idx + 1) % SORT_MODES.length];
+  document.getElementById('sortLabel').textContent = SORT_LABELS[sortMode];
+  document.getElementById('sortBtn').classList.toggle('active', sortMode !== 'default');
+  applyFilters();
+}
+
+function clearAllFilters() {
+  filterQuery    = '';
+  filterCategory = 'all';
+  filterStatus   = 'all';
+  sortMode       = 'default';
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchClear').classList.remove('visible');
+  document.getElementById('sortLabel').textContent = 'Default';
+  document.getElementById('sortBtn').classList.remove('active');
+  document.querySelectorAll('.fchip').forEach(c    => c.classList.toggle('active', c.dataset.cat    === 'all'));
+  document.querySelectorAll('.status-chip').forEach(c => c.classList.toggle('active', c.dataset.status === 'all'));
+  applyFilters();
+}
+
+// ── Core filter + sort engine ───────────────────────────────
+function applyFilters() {
+  const y = viewYear, m = viewMonth;
+  const today = new Date();
+  const todayStr = dateStr(today.getFullYear(), today.getMonth(), today.getDate());
+
+  // 1. Build candidate list with computed stats
+  let candidates = habits.map(h => {
+    const hs     = habitStats(h.id, y, m);
+    const streak = currentStreak(h.id);
+    const doneToday = isChecked(h.id, today.getFullYear(), today.getMonth(), today.getDate());
+    return { h, hs, streak, doneToday };
+  });
+
+  // 2. Filter by search query
+  if (filterQuery) {
+    candidates = candidates.filter(({ h }) =>
+      h.name.toLowerCase().includes(filterQuery) ||
+      (h.category || '').toLowerCase().includes(filterQuery) ||
+      (h.emoji || '').includes(filterQuery)
+    );
+  }
+
+  // 3. Filter by category
+  if (filterCategory !== 'all') {
+    candidates = candidates.filter(({ h }) => h.category === filterCategory);
+  }
+
+  // 4. Filter by status
+  if (filterStatus === 'completed')  candidates = candidates.filter(c => c.doneToday);
+  if (filterStatus === 'incomplete') candidates = candidates.filter(c => !c.doneToday);
+  if (filterStatus === 'streak')     candidates = candidates.filter(c => c.streak >= 2);
+
+  // 5. Sort
+  if (sortMode === 'pct-desc') candidates.sort((a, b) => b.hs.pct - a.hs.pct);
+  if (sortMode === 'pct-asc')  candidates.sort((a, b) => a.hs.pct - b.hs.pct);
+  if (sortMode === 'name')     candidates.sort((a, b) => a.h.name.localeCompare(b.h.name));
+  if (sortMode === 'streak')   candidates.sort((a, b) => b.streak - a.streak);
+
+  const visibleIds = new Set(candidates.map(c => c.h.id));
+  const total = habits.length;
+  const shown = visibleIds.size;
+
+  // 6. Show/hide table rows
+  const tbl = document.getElementById('tbody');
+  if (!tbl) return;
+
+  // Reorder visible rows, hide the rest
+  const allRows = Array.from(tbl.querySelectorAll('tr[data-habit-id]'));
+
+  // Apply visibility
+  allRows.forEach(row => {
+    const id = row.dataset.habitId;
+    if (visibleIds.has(id)) {
+      row.classList.remove('filtered-out');
+      row.classList.toggle('search-match', !!filterQuery);
+    } else {
+      row.classList.add('filtered-out');
+      row.classList.remove('search-match');
+    }
+  });
+
+  // Reorder rows to match sorted order
+  if (sortMode !== 'default' || filterQuery || filterCategory !== 'all' || filterStatus !== 'all') {
+    const sortedIds = candidates.map(c => c.h.id);
+    sortedIds.forEach((id, i) => {
+      const row = tbl.querySelector(`tr[data-habit-id="${id}"]`);
+      if (row) tbl.appendChild(row);   // moves to end in sorted order
+    });
+    // Move hidden rows to end too (doesn't matter visually)
+    allRows.filter(r => !visibleIds.has(r.dataset.habitId)).forEach(r => tbl.appendChild(r));
+  }
+
+  // 7. Highlight matched text in habit names
+  tbl.querySelectorAll('tr[data-habit-id]:not(.filtered-out) .habit-name-text').forEach(el => {
+    const orig = el.dataset.orig || el.textContent;
+    el.dataset.orig = orig;
+    if (filterQuery) {
+      const re = new RegExp('(' + filterQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi');
+      el.innerHTML = orig.replace(re, '<span class="hl">$1</span>');
+    } else {
+      el.textContent = orig;
+    }
+  });
+
+  // 8. Show empty state if no results
+  let emptyRow = tbl.querySelector('.filter-empty-row');
+  if (shown === 0) {
+    if (!emptyRow) {
+      emptyRow = document.createElement('tr');
+      emptyRow.className = 'filter-empty-row';
+      emptyRow.innerHTML = `<td colspan="40"><div class="filter-empty">
+        <span class="filter-empty-icon">🔍</span>
+        No habits match your filters.
+        <br>Try a different search or category.
+        <br><button class="filter-empty-btn" onclick="clearAllFilters()">Clear all filters</button>
+      </div></td>`;
+      tbl.appendChild(emptyRow);
+    }
+  } else if (emptyRow) {
+    emptyRow.remove();
+  }
+
+  // 9. Update results count
+  const countEl = document.getElementById('resultsCount');
+  if (countEl) {
+    const isFiltered = filterQuery || filterCategory !== 'all' || filterStatus !== 'all';
+    countEl.innerHTML = isFiltered
+      ? `Showing <b>${shown}</b> of <b>${total}</b>`
+      : `<b>${total}</b> habits`;
+  }
+
+  // 10. Active filter tags strip
+  updateActiveFilterStrip();
+}
+
+function updateActiveFilterStrip() {
+  const strip = document.getElementById('activeFiltersStrip');
+  const tags  = document.getElementById('afTags');
+  if (!strip || !tags) return;
+
+  const active = [];
+  if (filterQuery)              active.push({ label: `"${filterQuery}"`, key:'q' });
+  if (filterCategory !== 'all') active.push({ label: filterCategory,     key:'cat' });
+  if (filterStatus   !== 'all') active.push({ label: filterStatus,       key:'status' });
+  if (sortMode       !== 'default') active.push({ label: '↕ ' + SORT_LABELS[sortMode], key:'sort' });
+
+  strip.classList.toggle('visible', active.length > 0);
+  tags.innerHTML = active.map(a =>
+    `<span class="af-tag">${a.label}
+      <button class="af-remove" onclick="removeFilter('${a.key}')">×</button>
+     </span>`
+  ).join('');
+}
+
+function removeFilter(key) {
+  if (key === 'q')      clearSearch();
+  if (key === 'cat')    setCategory('all');
+  if (key === 'status') setStatus('all');
+  if (key === 'sort')   { sortMode='default'; document.getElementById('sortLabel').textContent='Default'; document.getElementById('sortBtn').classList.remove('active'); applyFilters(); }
+}
+// ═══════════════════════════════════════════════════════════
+
+
+// ── localStorage data functions ──────────────────────────────
+const TRACKER_KEY = 'habittracker_v3';
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(TRACKER_KEY);
+    if (raw) {
+      const st = JSON.parse(raw);
+      if (st.habits && st.habits.length > 0) {
+        habits = st.habits;
+        // Convert old check key format
+        Object.keys(st.checks || {}).forEach(k => {
+          const parts = k.split('_');
+          if (parts.length === 4) {
+            const dk = parts[1]+'-'+String(Number(parts[2])+1).padStart(2,'0')+'-'+String(parts[3]).padStart(2,'0');
+            if (!checks[dk]) checks[dk] = {};
+            checks[dk][parts[0]] = st.checks[k];
+          } else {
+            checks[k] = st.checks[k];
+          }
+        });
+        return;
+      }
+    }
+  } catch(e) {}
+  // Default habits
+  habits = [
+    {id:'h1',name:'Wake up at 5:15',emoji:'🌅',goal:1,category:'discipline'},
+    {id:'h2',name:'Plank + Exercise',emoji:'💪',goal:2,category:'health'},
+    {id:'h3',name:'Meditation',emoji:'🧘',goal:2,category:'health'},
+    {id:'h4',name:'Journaling',emoji:'📓',goal:2,category:'discipline'},
+    {id:'h5',name:'Deep Work [2hr]',emoji:'🧠',goal:2,category:'study'},
+    {id:'h6',name:'Daily Write [30 Pages]',emoji:'✍️',goal:1,category:'work'},
+    {id:'h7',name:'Work To Sir [Send]',emoji:'📤',goal:1,category:'work'},
+    {id:'h8',name:'Question Practice [20]',emoji:'❓',goal:2,category:'study'},
+    {id:'h9',name:'Phone Detox',emoji:'📵',goal:2,category:'discipline'},
+    {id:'h10',name:'No Doomscrolling',emoji:'🚫',goal:2,category:'discipline'},
+    {id:'h11',name:'No P.M.',emoji:'❌',goal:1,category:'discipline'},
+  ];
+}
+
+function saveToLocalStorage() {
+  const data = { year: viewYear, month: viewMonth, habits, checks };
+  localStorage.setItem(TRACKER_KEY, JSON.stringify(data));
+}
+// ──────────────────────────────────────────────────────────────
+
+// ── Render ────────────────────────────────────────────────────
+function renderAll() {
+  const y = viewYear, m = viewMonth;
+  const total = daysInMonth(y, m);
+  const now   = new Date();
+
+  document.getElementById('monthLabel').textContent = `${MONTHS[m]} ${y}`;
+
+  // Global stats
+  const gs = globalStats(y, m);
+  document.getElementById('gFrac').textContent = `${gs.done}/${gs.goal}`;
+  document.getElementById('gPct').textContent  = `${gs.pct}%`;
+  document.getElementById('gBar').style.width  = gs.pct + '%';
+  document.getElementById('gLbl').textContent  = `${gs.done} completed of ${gs.goal} possible`;
+  const circ = 163.4;
+  document.getElementById('donutFg').style.strokeDashoffset = circ - (circ * gs.pct / 100);
+  document.getElementById('donutPct').textContent = gs.pct + '%';
+
+  // Weekly summary cards
+  const maxWeek = weekOf(total, y, m);
+  let wHtml = '';
+  for (let w = 1; w <= maxWeek; w++) {
+    const ws = weekStats(w, y, m);
+    const pColor = ws.pct>=80?'var(--accent)':ws.pct>=50?'var(--accent2)':'var(--red)';
+    wHtml += `<div class="wcard">
+      <div class="wcard-t">Week ${w}</div>
+      <div class="wcard-row"><span class="wcard-lbl">Done</span><span style="color:var(--accent);font-weight:700">${ws.done}</span></div>
+      <div class="wcard-row"><span class="wcard-lbl">Goal</span><span>${ws.goal}</span></div>
+      <div class="wcard-row"><span class="wcard-lbl">Left</span><span style="color:var(--red);font-weight:700">${ws.left}</span></div>
+      <div class="wcard-row"><span class="wcard-lbl">%</span><span style="color:${pColor};font-weight:700">${ws.pct}%</span></div>
+      <div class="mini-bar"><div class="mini-fill" style="width:${ws.pct}%"></div></div>
+    </div>`;
+  }
+  document.getElementById('weekRow').innerHTML = wHtml;
+
+  // Table header
+  const CAT_COLORS = { health:'#60f0a0', study:'#60c8f0', work:'#f0e060', discipline:'#f06080' };
+  let thHtml = `<tr>
+    <th class="left" style="min-width:190px">HABIT</th>
+    <th style="min-width:44px">GOAL</th>`;
+  for (let d = 1; d <= total; d++) {
+    const dw  = new Date(y, m, d).getDay();
+    const dn  = DAYS[dw].slice(0,1);
+    const tod = isToday(y, m, d);
+    thHtml += `<th class="${tod?'today-h':''}" style="min-width:30px;font-size:9px;">
+      <div>${d}</div><div style="opacity:0.5">${dn}</div></th>`;
+  }
+  thHtml += `<th style="min-width:44px;color:var(--accent)">✓</th>
+    <th style="min-width:44px;color:var(--red)">←</th>
+    <th style="min-width:50px;color:var(--accent3)">%</th></tr>`;
+  document.getElementById('thead').innerHTML = thHtml;
+
+  // Table body
+  let tbHtml = '';
+  habits.forEach(h => {
+    const hs = habitStats(h.id, y, m);
+    const pColor = hs.pct>=80?'var(--accent)':hs.pct>=50?'var(--accent2)':'var(--red)';
+    const streak = currentStreak(h.id);
+    const nameColor = CAT_COLORS[h.category] || 'var(--text)';
+
+    tbHtml += `<tr data-habit-id="${h.id}">
+      <td class="habit-cell">
+        <div class="habit-name-inner">
+          <span>${h.emoji||'●'}</span>
+          <span class="habit-name-text" style="color:${nameColor}">${h.name}</span>
+          ${streak>1?`<span class="streak-chip">🔥${streak}</span>`:''}
+          ${(()=>{ const nc=Object.values(notesCache).filter(n=>n.habitId===h.id&&n.text).length; return nc>0?`<button class="note-count-chip" onclick="NoteSystem.open('${h.id}','${dateStr(y,m,new Date().getDate()>0?new Date().getDate():1)}')" title="${nc} notes">📝 ${nc}</button>`:''; })()}
+          <button class="del-btn" onclick="deleteHabit('${h.id}','${h.name.replace(/'/,"\\'")}')">✕</button>
+        </div>
+      </td>
+      <td class="goal-cell">${h.goal}</td>`;
+
+    for (let d = 1; d <= total; d++) {
+      const ds   = dateStr(y, m, d);
+      const chk  = isChecked(h.id, y, m, d);
+      const we   = isWeekend(y, m, d);
+      const tod  = isToday(y, m, d);
+      const _note = hasNote(h.id, ds);
+      tbHtml += `<td>
+        <button class="day-btn ${chk?'checked':''} ${we?'weekend':''} ${tod?'today-col':''} ${_note?'has-note':''}"
+          data-habit="${h.id}" data-date="${ds}"
+          onclick="toggleCheck('${h.id}','${ds}',this)"
+          ondblclick="NoteSystem.open('${h.id}','${ds}')"
+          oncontextmenu="event.preventDefault();NoteSystem.showCtxMenu('${h.id}','${ds}',event.clientX,event.clientY)"
+          ontouchstart="NoteSystem.onTouchStart('${h.id}','${ds}',event)"
+          ontouchend="NoteSystem.onTouchEnd()"
+          ontouchmove="NoteSystem.onTouchEnd()"
+          title="${_note?'Has note — double-click to edit':'Double-click to add note'}">
+          <div class="checkbox"></div>
+          ${_note ? '<div class="note-dot"></div>' : ''}
+        </button>
+      </td>`;
+    }
+
+    tbHtml += `<td class="stat-cell" style="color:var(--accent)">${hs.done}</td>
+      <td class="stat-cell" style="color:var(--red)">${hs.left}</td>
+      <td class="stat-cell" style="color:${pColor}">${hs.pct}%</td>
+    </tr>`;
+  });
+
+  // Empty rows
+  for (let i = 0; i < 3; i++) {
+    tbHtml += `<tr class="empty-row">
+      <td style="height:34px"></td><td></td>`;
+    for (let d = 0; d <= total+2; d++) tbHtml += '<td></td>';
+    tbHtml += '</tr>';
+  }
+
+  document.getElementById('tbody').innerHTML = tbHtml;
+  // Re-apply filters after table re-render
+  setTimeout(applyFilters, 0);
+}
+
+function currentStreak(habitId) {
+  const y = new Date().getFullYear();
+  const m = new Date().getMonth();
+  let streak = 0;
+  for (let d = new Date().getDate(); d >= 1; d--) {
+    if (isChecked(habitId, y, m, d)) streak++;
+    else break;
+  }
+  return streak;
+}
+
+// ── Sync badge ────────────────────────────────────────────────
+function setSyncStatus(type, label) {
+  const badge = document.getElementById('syncBadge');
+  const dot   = document.getElementById('syncDot');
+  const lbl   = document.getElementById('syncLabel');
+  badge.className = 'sync-badge ' + type;
+  dot.className   = 'sync-dot' + (type==='syncing'?' spinning':'');
+  lbl.textContent = label;
+}
+
+// ── Toast ─────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type='accent') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type==='error'?'var(--red)':type==='muted'?'var(--border)':'var(--accent)';
+  t.style.color = type==='muted'?'var(--text)':'#0d0d0d';
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── Sign out ──────────────────────────────────────────────────
+function signOut() {
+  localStorage.removeItem('ht_session_v1');
+  window.location.href = 'auth.html';
+}
+</script>
+<script>
+(function(){
+  var btn=document.getElementById('themeBtn');
+  if(btn)btn.textContent=ThemeManager.getCurrent()==='dark'?'\u2600\uFE0F  Light':'\uD83C\uDF19  Dark';
+})();
+</script>
+
+<script src="pwa.js"></script>
+<script>PWA.init({ page: 'home' });
+// ═══════════════════════════════════════════════════════════
+//  AISuggest — AI-powered habit recommendation engine
+//  Uses Anthropic /v1/messages via the artifact API proxy
+// ═══════════════════════════════════════════════════════════
+const AISuggest = (() => {
+  let _open = false;
+  let _suggestions = [];   // [{name,emoji,category,goal,why}]
+  let _selected = new Set();
+  let _added    = new Set();
+
+  const CAT_EMOJIS = {
+    health:'💪', study:'📚', work:'💼', discipline:'🔥'
+  };
+
+  // ── Toggle panel ────────────────────────────────────────
+  function toggle() {
+    _open = !_open;
+    document.getElementById('aiPanelBody').classList.toggle('open', _open);
+    document.getElementById('aiToggleIcon').classList.toggle('open', _open);
+    document.getElementById('aiPanelHeader').setAttribute('aria-expanded', _open);
+    if (_open) setTimeout(() => {
+      const inp = document.getElementById('aiGoalInput');
+      if (inp) inp.focus();
+    }, 200);
+  }
+
+  // ── Call Anthropic API ──────────────────────────────────
+  async function ask() {
+    const goalEl = document.getElementById('aiGoalInput');
+    const goal   = goalEl ? goalEl.value.trim() : '';
+    if (!goal) { if (goalEl) goalEl.focus(); return; }
+
+    const btn = document.getElementById('aiAskBtn');
+    if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+    const errEl = document.getElementById('aiError');
+    if (errEl) errEl.classList.remove('visible');
+    const sugEl = document.getElementById('aiSuggestions');
+    if (sugEl) sugEl.classList.remove('visible');
+
+    const existingNames = (typeof habits !== 'undefined' ? habits : [])
+      .map(h => h.name).join(', ') || 'none yet';
+
+    const systemPrompt =
+      'You are a habit coach AI inside a habit tracker app.\n' +
+      'The user will describe a personal goal. Suggest 5 specific, actionable daily habits.\n' +
+      'Respond ONLY with a JSON array. No markdown fences, no preamble, no explanation.\n' +
+      'Each item: { "name": string (max 32 chars), "emoji": string (single emoji), ' +
+      '"category": "health"|"study"|"work"|"discipline", "goal": 1 or 2, "why": string (max 60 chars) }\n' +
+      'User already tracks: ' + existingNames + '. Avoid exact duplicates.';
+
+    const userPrompt = 'My goal: ' + goal + '\nSuggest 5 daily habits as a JSON array only.';
+
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model:      'claude-sonnet-4-20250514',
+          max_tokens: 900,
+          system:     systemPrompt,
+          messages:   [{ role: 'user', content: userPrompt }]
+        })
+      });
+
+      if (!resp.ok) {
+        const errBody = await resp.text().catch(() => '');
+        throw new Error('API ' + resp.status + (errBody ? ': ' + errBody.slice(0,120) : ''));
+      }
+
+      const data = await resp.json();
+      const raw  = (data.content || [])
+        .filter(b => b.type === 'text')
+        .map(b => b.text)
+        .join('');
+
+      // Strip accidental fences
+      const clean = raw.replace(/```[a-z]*/gi, '').replace(/```/g, '').trim();
+
+      let parsed;
+      try { parsed = JSON.parse(clean); }
+      catch {
+        const m = clean.match(/\[[\s\S]*\]/);
+        if (!m) throw new Error('Could not parse AI response — try rephrasing your goal');
+        parsed = JSON.parse(m[0]);
+      }
+
+      if (!Array.isArray(parsed) || !parsed.length)
+        throw new Error('AI returned no suggestions');
+
+      _suggestions = parsed.slice(0, 6).map(s => ({
+        name:     String(s.name     || '').slice(0, 40),
+        emoji:    String(s.emoji    || CAT_EMOJIS[s.category] || '⭐').slice(0, 4),
+        category: ['health','study','work','discipline'].includes(s.category)
+                    ? s.category : 'discipline',
+        goal:     Number(s.goal) === 2 ? 2 : 1,
+        why:      String(s.why || '').slice(0, 80),
+      }));
+
+      _selected.clear();
+      renderCards(goal);
+      saveGoalToHistory(goal, 0);
+      // Show refine row
+      const refRow = document.getElementById('aiRefineRow');
+      if (refRow) refRow.style.display = 'flex';
+
+    } catch(err) {
+      showError(String(err.message || err) || 'Something went wrong');
+    } finally {
+      if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
+    }
+  }
+
+  // ── Render suggestion cards ─────────────────────────────
+  function renderCards(goal) {
+    const labelEl = document.getElementById('aiGoalLabel');
+    if (labelEl) labelEl.textContent = goal;
+
+    const grid = document.getElementById('aiCardsGrid');
+    if (!grid) return;
+
+    const CAT_CLS = {
+      health:'cat-health', study:'cat-study',
+      work:'cat-work', discipline:'cat-discipline'
+    };
+
+    grid.innerHTML = _suggestions.map((s, i) => {
+      const catCls  = CAT_CLS[s.category] || 'cat-discipline';
+      const isAdded = _added.has(s.name);
+      const isSel   = _selected.has(i);
+      return '<div class="ai-suggestion-card' +
+        (isAdded ? ' added' : isSel ? ' selected' : '') +
+        '" id="aiCard-' + i + '"' +
+        ' onclick="AISuggest.toggleCard(' + i + ')"' +
+        ' role="checkbox" aria-checked="' + isSel + '"' +
+        ' tabindex="0"' +
+        ' onkeydown="if(event.key===\' \'||event.key===\'Enter\'){event.preventDefault();AISuggest.toggleCard(' + i + ')}">' +
+        '<div class="sc-top">' +
+          '<div class="sc-emoji">' + s.emoji + '</div>' +
+          '<div class="sc-add-icon" id="aiCardIcon-' + i + '">' + (isAdded ? '✓' : isSel ? '✓' : '+') + '</div>' +
+        '</div>' +
+        '<div class="sc-name">' + escapeHtml(s.name) + '</div>' +
+        '<div class="sc-why">' + escapeHtml(s.why) + '</div>' +
+        '<div class="sc-meta">' +
+          '<span class="sc-cat-badge ' + catCls + '">' + s.category + '</span>' +
+          '<span class="sc-goal">×' + s.goal + '/day</span>' +
+        '</div>' +
+        '<button class="sc-explain-btn" onclick="event.stopPropagation();AISuggest.explain(' + i + ')">Why? →</button>' +
+        '</div>';
+    }).join('');
+
+    const sugEl = document.getElementById('aiSuggestions');
+    if (sugEl) sugEl.classList.add('visible');
+    updateAddRow();
+  }
+
+  // ── Toggle individual card ──────────────────────────────
+  function toggleCard(i) {
+    if (_added.has((_suggestions[i] || {}).name)) return;
+    if (_selected.has(i)) _selected.delete(i);
+    else _selected.add(i);
+
+    const card = document.getElementById('aiCard-' + i);
+    const icon = document.getElementById('aiCardIcon-' + i);
+    if (card) {
+      card.classList.toggle('selected', _selected.has(i));
+      card.setAttribute('aria-checked', _selected.has(i));
+    }
+    if (icon) icon.textContent = _selected.has(i) ? '✓' : '+';
+    updateAddRow();
+  }
+
+  // ── Select / deselect all ───────────────────────────────
+  function selectAll() {
+    const eligible = _suggestions
+      .map((s, i) => i)
+      .filter(i => !_added.has(_suggestions[i].name));
+    const allOn = eligible.every(i => _selected.has(i));
+    eligible.forEach(i => allOn ? _selected.delete(i) : _selected.add(i));
+    eligible.forEach(i => {
+      const card = document.getElementById('aiCard-' + i);
+      const icon = document.getElementById('aiCardIcon-' + i);
+      if (card) {
+        card.classList.toggle('selected', _selected.has(i));
+        card.setAttribute('aria-checked', _selected.has(i));
+      }
+      if (icon) icon.textContent = _selected.has(i) ? '✓' : '+';
+    });
+    updateAddRow();
+  }
+
+  // ── Add selected habits to tracker ─────────────────────
+  async function addSelected() {
+    if (!_selected.size) return;
+    const toAdd  = [..._selected].map(i => _suggestions[i]);
+    const emojis = { health:'💪', study:'📚', work:'💼', discipline:'🔥' };
+
+    for (const s of toAdd) {
+      const newHabit = {
+        name:     s.name,
+        goal:     s.goal,
+        category: s.category,
+        emoji:    s.emoji || emojis[s.category] || '⭐',
+        order:    (typeof habits !== 'undefined' ? habits.length : 0),
+      };
+
+      let saved = false;
+
+      // Firebase path
+      if (typeof uid !== 'undefined' && uid &&
+          typeof db  !== 'undefined' && db) {
+        try {
+          newHabit.createdAt = new Date().toISOString();
+          // localStorage
+          saved = true;
+        } catch(e) { /* fall through to local */ }
+      }
+
+      // Local storage path
+      if (!saved) {
+        try {
+          const state  = JSON.parse(localStorage.getItem('habittracker_v3') || '{}');
+          state.habits = state.habits || [];
+          newHabit.id  = 'ai_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+          newHabit.createdAt = new Date().toISOString();
+          state.habits.push(newHabit);
+          localStorage.setItem('habittracker_v3', JSON.stringify(state));
+          if (typeof habits !== 'undefined') habits.push(newHabit);
+        } catch(e) { console.error('localStorage save failed', e); }
+      }
+
+      _added.add(s.name);
+    }
+
+    // Mark cards as added
+    [..._selected].forEach(i => {
+      const card = document.getElementById('aiCard-' + i);
+      const icon = document.getElementById('aiCardIcon-' + i);
+      if (card) { card.classList.remove('selected'); card.classList.add('added'); }
+      if (icon) icon.textContent = '✓';
+    });
+    _selected.clear();
+    updateAddRow();
+
+    if (typeof renderAll === 'function') renderAll();
+
+    // Update history with how many were added
+    const currGoal = (document.getElementById('aiGoalInput')?.value || '').trim();
+    if (currGoal) saveGoalToHistory(currGoal, toAdd.length);
+
+    if (typeof showToast === 'function') {
+      showToast(
+        '\u2736 ' + toAdd.length + ' habit' + (toAdd.length > 1 ? 's' : '') + ' added from AI!',
+        'accent'
+      );
+    }
+  }
+
+  // ── Update the "Add Selected" row ───────────────────────
+  function updateAddRow() {
+    const row = document.getElementById('aiAddRow');
+    const cnt = document.getElementById('aiSelectedCount');
+    if (row) row.classList.toggle('visible', _selected.size > 0);
+    if (cnt) cnt.textContent = _selected.size
+      ? _selected.size + ' habit' + (_selected.size > 1 ? 's' : '') + ' selected'
+      : '';
+  }
+
+  // ── Show error message ──────────────────────────────────
+  function showError(msg) {
+    const el = document.getElementById('aiError');
+    if (el) { el.textContent = '\u26a0 ' + msg; el.classList.add('visible'); }
+  }
+
+
+  // ── Recent goals persistence ────────────────────────────
+  const GOALS_KEY = 'ht_ai_goals_v1';
+  let _goalHistory = [];  // [{goal, timestamp, added}]
+  let _explainIdx  = null;
+
+  function loadGoalHistory() {
+    try { _goalHistory = JSON.parse(localStorage.getItem(GOALS_KEY) || '[]'); }
+    catch { _goalHistory = []; }
+    renderRecentChips();
+    renderHistoryPanel();
+  }
+
+  function saveGoalToHistory(goal, addedCount) {
+    _goalHistory = _goalHistory.filter(g => g.goal !== goal); // dedupe
+    _goalHistory.unshift({ goal, timestamp: Date.now(), added: addedCount });
+    _goalHistory = _goalHistory.slice(0, 8); // keep last 8
+    try { localStorage.setItem(GOALS_KEY, JSON.stringify(_goalHistory)); } catch {}
+    renderRecentChips();
+    renderHistoryPanel();
+  }
+
+  function renderRecentChips() {
+    const row   = document.getElementById('aiRecentRow');
+    const chips = document.getElementById('aiRecentChips');
+    if (!row || !chips) return;
+    const recent = _goalHistory.slice(0, 4);
+    if (!recent.length) { row.style.display = 'none'; return; }
+    row.style.display = 'flex';
+    chips.innerHTML = recent.map(g => {
+      const label = g.goal.length > 22 ? g.goal.slice(0, 22) + '…' : g.goal;
+      return '<span class="ai-goal-chip" onclick="AISuggest.useGoal(' + JSON.stringify(g.goal) + ')" title="' + escapeHtml(g.goal) + '">'
+        + escapeHtml(label)
+        + '<span class="ai-goal-chip-x" onclick="event.stopPropagation();AISuggest.removeGoal(' + JSON.stringify(g.goal) + ')">×</span>'
+        + '</span>';
+    }).join('');
+  }
+
+  function renderHistoryPanel() {
+    const sec  = document.getElementById('aiHistorySection');
+    const list = document.getElementById('aiHistoryList');
+    if (!sec || !list) return;
+    if (!_goalHistory.length) { sec.classList.remove('visible'); return; }
+    sec.classList.add('visible');
+    list.innerHTML = _goalHistory.map(g => {
+      const ago = timeAgo(g.timestamp);
+      return '<div class="ai-history-item" onclick="AISuggest.useGoal(' + JSON.stringify(g.goal) + ')">'
+        + '<span style="font-size:14px">✦</span>'
+        + '<span class="ai-history-goal">' + escapeHtml(g.goal) + '</span>'
+        + (g.added ? '<span class="ai-history-added">+' + g.added + ' added</span>' : '')
+        + '<span class="ai-history-meta">' + ago + '</span>'
+        + '</div>';
+    }).join('');
+  }
+
+  function timeAgo(ts) {
+    const sec = Math.floor((Date.now() - ts) / 1000);
+    if (sec < 60)   return 'just now';
+    if (sec < 3600) return Math.floor(sec/60)   + 'm ago';
+    if (sec < 86400)return Math.floor(sec/3600)  + 'h ago';
+    return Math.floor(sec/86400) + 'd ago';
+  }
+
+  function useGoal(goal) {
+    const inp = document.getElementById('aiGoalInput');
+    if (inp) { inp.value = goal; inp.focus(); }
+    ask();
+  }
+
+  function removeGoal(goal) {
+    _goalHistory = _goalHistory.filter(g => g.goal !== goal);
+    try { localStorage.setItem(GOALS_KEY, JSON.stringify(_goalHistory)); } catch {}
+    renderRecentChips();
+    renderHistoryPanel();
+  }
+
+  function clearHistory() {
+    _goalHistory = [];
+    try { localStorage.removeItem(GOALS_KEY); } catch {}
+    renderRecentChips();
+    renderHistoryPanel();
+  }
+
+  // ── Refine / regenerate ──────────────────────────────────
+  function refine() {
+    const refineTxt = (document.getElementById('aiRefineInput')?.value || '').trim();
+    const goalTxt   = (document.getElementById('aiGoalInput')?.value  || '').trim();
+    if (!goalTxt) return;
+    const combined = goalTxt + (refineTxt ? '. Also: ' + refineTxt : '');
+    const inp = document.getElementById('aiGoalInput');
+    if (inp) inp.value = combined;
+    if (document.getElementById('aiRefineInput')) document.getElementById('aiRefineInput').value = '';
+    ask();
+  }
+
+  function regenerate() {
+    ask();
+  }
+
+  // ── Explain a card ───────────────────────────────────────
+  async function explain(i) {
+    _explainIdx = i;
+    const s = _suggestions[i];
+    if (!s) return;
+
+    document.getElementById('expEmoji').textContent   = s.emoji;
+    document.getElementById('expName').textContent    = s.name;
+    document.getElementById('expCat').textContent     = s.category + ' · ×' + s.goal + '/day';
+    document.getElementById('expWhy').textContent     = s.why || 'AI-recommended for your goal.';
+    document.getElementById('expScience').textContent = '';
+    document.getElementById('expTip').textContent     = 'Loading science brief…';
+    document.getElementById('expSource').textContent  = '✦ AI Recommendation';
+
+    const addBtn = document.getElementById('expAddBtn');
+    if (addBtn) addBtn.textContent = _added.has(s.name) ? '✓ Already Added' : '+ Add This Habit';
+
+    document.getElementById('ai-explain-backdrop').classList.add('open');
+
+    // Stream a short science explanation
+    const goal = (document.getElementById('aiGoalInput')?.value || 'the user goal').trim();
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model:      'claude-sonnet-4-20250514',
+          max_tokens: 200,
+          system:     'You are a concise habit science coach. Reply with ONLY a JSON object: ' +
+                      '{ "science": "1-2 sentence scientific reason (cite a study name or finding if possible, max 100 chars)", ' +
+                      '"tip": "1 practical implementation tip (max 80 chars)", "source": "Study/principle name" }. ' +
+                      'No markdown, no preamble.',
+          messages:   [{ role: 'user', content: 'Habit: ' + s.name + '. User goal: ' + goal + '. Explain briefly.' }]
+        })
+      });
+      const data = await resp.json();
+      const raw  = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+      const clean = raw.replace(/```[a-z]*/gi,'').replace(/```/g,'').trim();
+      let ex;
+      try { ex = JSON.parse(clean); }
+      catch { const m = clean.match(/\{[\s\S]*\}/); ex = m ? JSON.parse(m[0]) : {}; }
+
+      if (ex.science) document.getElementById('expScience').innerHTML =
+        '<b>The science:</b> ' + escapeHtml(ex.science);
+      if (ex.tip)     document.getElementById('expTip').textContent  = '💡 ' + ex.tip;
+      if (ex.source)  document.getElementById('expSource').textContent = '✦ Based on: ' + ex.source;
+    } catch {
+      document.getElementById('expTip').textContent = '💡 Start small: commit to just 2 minutes per day.';
+    }
+  }
+
+  function closeExplain(e) {
+    if (e && e.target !== document.getElementById('ai-explain-backdrop')) return;
+    document.getElementById('ai-explain-backdrop').classList.remove('open');
+    _explainIdx = null;
+  }
+
+  function addFromExplain() {
+    if (_explainIdx === null) return;
+    if (!_selected.has(_explainIdx)) {
+      _selected.add(_explainIdx);
+      const card = document.getElementById('aiCard-' + _explainIdx);
+      if (card) card.classList.add('selected');
+    }
+    document.getElementById('ai-explain-backdrop').classList.remove('open');
+    addSelected();
+  }
+
+  // ── Init ─────────────────────────────────────────────────
+  function init() {
+    loadGoalHistory();
+    // Escape key closes explain modal
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        document.getElementById('ai-explain-backdrop')?.classList.remove('open');
+      }
+    });
+  }
+
+
+  init();
+  return { toggle, ask, toggleCard, selectAll, addSelected, explain, closeExplain, addFromExplain, refine, regenerate, useGoal, removeGoal, clearHistory };
+})();
+// ═══════════════════════════════════════════════════════════
+</script>
+
+
+<!-- ═══════════════ AI EXPLAIN MODAL ═══════════════════════ -->
+<div id="ai-explain-backdrop" onclick="AISuggest.closeExplain(event)">
+  <div id="ai-explain-modal" role="dialog" aria-modal="true">
+    <div class="ai-exp-header">
+      <div class="ai-exp-emoji" id="expEmoji">⭐</div>
+      <div>
+        <div class="ai-exp-name"  id="expName">Habit Name</div>
+        <div class="ai-exp-cat"   id="expCat">category · ×1/day</div>
+      </div>
+    </div>
+    <div class="ai-exp-source" id="expSource">✦ AI Recommendation</div>
+    <div class="ai-exp-why"    id="expWhy">Loading explanation...</div>
+    <div class="ai-exp-science" id="expScience"></div>
+    <div class="ai-exp-tip"     id="expTip"></div>
+    <div class="ai-exp-actions">
+      <button class="ai-exp-add-btn"   id="expAddBtn"  onclick="AISuggest.addFromExplain()">+ Add This Habit</button>
+      <button class="ai-exp-close-btn" onclick="AISuggest.closeExplain()">Close</button>
+    </div>
+  </div>
+</div>
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- ══════════════════ NOTES CONTEXT MENU ══════════════════ -->
+<div id="note-ctx-menu" style="display:none">
+  <button class="ctx-item" onclick="NoteSystem.openFromCtx('check')">
+    <span class="ctx-icon">✅</span> Toggle check
+  </button>
+  <button class="ctx-item" onclick="NoteSystem.openFromCtx('note')">
+    <span class="ctx-icon">📝</span> Add / edit note
+  </button>
+  <button class="ctx-item" onclick="NoteSystem.openFromCtx('history')">
+    <span class="ctx-icon">🗂</span> View history
+  </button>
+  <div class="ctx-sep"></div>
+  <button class="ctx-item danger" onclick="NoteSystem.openFromCtx('delete')">
+    <span class="ctx-icon">🗑</span> Delete note
+  </button>
+</div>
+
+<!-- ══════════════════ NOTES MODAL ══════════════════════════ -->
+<div id="note-modal-backdrop" style="display:none" onclick="NoteSystem.closeIfBackdrop(event)">
+  <div id="note-modal" role="dialog" aria-modal="true" aria-labelledby="modal-habit-name">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-habit-emoji" id="modal-emoji">📝</div>
+      <div class="modal-title-group">
+        <div class="modal-habit-name" id="modal-habit-name">Habit</div>
+        <div class="modal-date-label" id="modal-date-label">Date</div>
+      </div>
+      <button class="modal-close" onclick="NoteSystem.close()" aria-label="Close">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Mood -->
+      <div class="mood-row">
+        <span class="mood-label">Mood</span>
+        <div class="mood-chips">
+          <button class="mood-chip" data-mood="🔥" onclick="NoteSystem.setMood('🔥')" title="On fire">🔥</button>
+          <button class="mood-chip" data-mood="💪" onclick="NoteSystem.setMood('💪')" title="Strong">💪</button>
+          <button class="mood-chip" data-mood="😐" onclick="NoteSystem.setMood('😐')" title="Okay">😐</button>
+          <button class="mood-chip" data-mood="😴" onclick="NoteSystem.setMood('😴')" title="Tired">😴</button>
+          <button class="mood-chip" data-mood="❌" onclick="NoteSystem.setMood('❌')" title="Struggled">❌</button>
+        </div>
+      </div>
+
+      <!-- Note text -->
+      <div class="note-textarea-wrap">
+        <textarea class="note-textarea" id="note-textarea"
+          placeholder="How did this habit go today? Any obstacles, wins, or reflections..."
+          maxlength="500"
+          oninput="NoteSystem.onTextInput(this)"></textarea>
+        <div class="note-char-count" id="note-char-count">0/500</div>
+      </div>
+
+      <!-- Tags -->
+      <div>
+        <div class="tags-row">
+          <span class="tags-label">Tags</span>
+          <button class="note-tag" data-tag="win"       onclick="NoteSystem.toggleTag('win')">🏆 Win</button>
+          <button class="note-tag" data-tag="struggle"  onclick="NoteSystem.toggleTag('struggle')">⚡ Struggle</button>
+          <button class="note-tag" data-tag="insight"   onclick="NoteSystem.toggleTag('insight')">💡 Insight</button>
+          <button class="note-tag" data-tag="personal"  onclick="NoteSystem.toggleTag('personal')">🔒 Personal</button>
+          <button class="note-tag" data-tag="important" onclick="NoteSystem.toggleTag('important')">⭐ Important</button>
+        </div>
+      </div>
+
+      <!-- Past notes for this habit -->
+      <div class="note-history-section" id="note-history-section">
+        <div class="note-history-title">Past notes for this habit</div>
+        <div class="note-history-list" id="note-history-list"></div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-del-note" id="btn-del-note" onclick="NoteSystem.deleteNote()" style="display:none">Delete</button>
+      <button class="btn-save-note" id="btn-save-note" onclick="NoteSystem.save()">💾 Save Note</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

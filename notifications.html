@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Habit Tracker — Reminders</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@700;800&family=Cabinet+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet">
+<script src="theme.js"></script>
+<style>
+/* ── RESET & TOKENS ─────────────────────────────────────────── */
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#f5f2eb; --s0:#ffffff; --s1:#ede9df; --s2:#e4e0d6;
+  --bdr:#ddd8ce; --bdr2:#ccc8bc;
+  --ink:#0a0a0a; --ink2:#6b6660; --ink3:#a8a39d;
+  --lime:#7ab522; --lime-bg:#eaf5d3; --lime-dk:#2e5000;
+  --amber:#e09820; --amber-bg:#fef3db; --amber-dk:#7a4800;
+  --coral:#e04830; --coral-bg:#fdecea; --coral-dk:#7a1800;
+  --sky:#2890d0; --sky-bg:#e8f4fc; --sky-dk:#0a4878;
+  --purple:#6040c8; --purple-bg:#f0ecfc; --purple-dk:#280878;
+  --sh: 0 2px 12px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.04);
+  --sh-lg: 0 8px 32px rgba(0,0,0,.10);
+  --r8:8px; --r12:12px; --r16:16px;
+}
+[data-theme="dark"]{
+  --bg:#111010; --s0:#1c1b1a; --s1:#252422; --s2:#2e2c2a;
+  --bdr:#2e2c2a; --bdr2:#3a3835;
+  --ink:#f0ece4; --ink2:#a09890; --ink3:#5a5450;
+  --lime:#a0d840; --lime-bg:#1a2e00; --lime-dk:#c8f060;
+  --amber:#e0a840; --amber-bg:#2e1e00; --amber-dk:#fac860;
+  --coral:#e86060; --coral-bg:#2e0a0a; --coral-dk:#f08080;
+  --sky:#50a8d0; --sky-bg:#082030; --sky-dk:#80c8f0;
+  --purple:#9070e8; --purple-bg:#180830; --purple-dk:#c0a0f8;
+  --sh:0 2px 12px rgba(0,0,0,.3); --sh-lg:0 8px 32px rgba(0,0,0,.45);
+}
+html,body{height:100%;}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:'Cabinet Grotesk',sans-serif; font-size:15px;
+  line-height:1.55; transition:background .3s,color .3s;
+}
+
+/* ── NAV ─────────────────────────────────────────────────────── */
+nav{
+  padding:14px 32px; border-bottom:1px solid var(--bdr);
+  background:var(--s0); display:flex; align-items:center;
+  justify-content:space-between; position:sticky; top:0; z-index:100;
+  transition:background .3s,border-color .3s;
+}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;
+  color:var(--lime);text-decoration:none;}
+.logo span{color:var(--ink);}
+.nav-r{display:flex;align-items:center;gap:10px;}
+.nav-a{font-size:12px;color:var(--ink2);text-decoration:none;font-family:'DM Mono',monospace;
+  padding:7px 12px;border:1px solid var(--bdr);border-radius:100px;transition:all .15s;}
+.nav-a:hover,.nav-a.on{border-color:var(--ink);color:var(--ink);}
+.nav-a.on{background:var(--ink);color:var(--bg);}
+.theme-btn{background:transparent;border:1px solid var(--bdr2);color:var(--ink);
+  padding:6px 12px;border-radius:8px;font-family:'DM Mono',monospace;font-size:12px;
+  cursor:pointer;transition:all .15s;}
+.theme-btn:hover{border-color:var(--ink);}
+
+/* ── PAGE ─────────────────────────────────────────────────────── */
+.page{max-width:860px;margin:0 auto;padding:36px 24px 64px;}
+
+/* PAGE HERO PERMISSION CARD */
+.perm-card{
+  border-radius:var(--r16); padding:36px 40px;
+  display:flex; align-items:center; gap:32px;
+  margin-bottom:28px; position:relative; overflow:hidden;
+  background:var(--ink); color:var(--bg);
+  transition:background .3s;
+}
+.perm-card::before{
+  content:''; position:absolute; top:-60px; right:-60px;
+  width:220px; height:220px; border-radius:50%;
+  background:radial-gradient(circle,rgba(160,216,64,.18),transparent 70%);
+}
+.perm-icon{font-size:52px;line-height:1;flex-shrink:0;}
+.perm-text h2{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;
+  margin-bottom:8px;line-height:1.1;}
+.perm-text p{font-size:13px;color:rgba(255,255,255,.55);line-height:1.5;max-width:380px;}
+.perm-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+.btn-enable{background:var(--lime);color:var(--lime-dk);border:none;
+  padding:11px 22px;border-radius:10px;font-family:'DM Mono',monospace;
+  font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;letter-spacing:.04em;}
+.btn-enable:hover{filter:brightness(1.08);transform:translateY(-1px);}
+.btn-enable:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.status-pill{display:inline-flex;align-items:center;gap:6px;
+  padding:8px 14px;border-radius:100px;font-family:'DM Mono',monospace;
+  font-size:11px;font-weight:500;border:1px solid;}
+.status-pill.granted{background:rgba(160,216,64,.12);border-color:rgba(160,216,64,.3);color:var(--lime);}
+.status-pill.denied{background:rgba(232,96,96,.12);border-color:rgba(232,96,96,.3);color:#e86060;}
+.status-pill.default{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:rgba(255,255,255,.5);}
+.status-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+@media(max-width:600px){.perm-card{flex-direction:column;gap:16px;padding:24px;}}
+
+/* ── SECTION DIVIDER ──────────────────────────────────────────── */
+.div{display:flex;align-items:center;gap:12px;margin:32px 0 18px;}
+.div-line{flex:1;height:1px;background:var(--bdr);}
+.div-lbl{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink3);
+  letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;}
+
+/* ── CARDS ──────────────────────────────────────────────────── */
+.card{background:var(--s0);border:1px solid var(--bdr);border-radius:var(--r16);
+  padding:24px;box-shadow:var(--sh);transition:background .3s,border-color .3s;
+  margin-bottom:18px;}
+.card-eye{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink3);
+  text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px;}
+.card-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;
+  color:var(--ink);margin-bottom:18px;}
+
+/* ── QUICK ACTIONS ────────────────────────────────────────────── */
+.quick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;}
+.quick-btn{
+  background:var(--s1);border:1px solid var(--bdr);border-radius:var(--r12);
+  padding:16px;cursor:pointer;transition:all .18s;text-align:left;
+  display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden;
+}
+.quick-btn:hover{border-color:var(--bdr2);transform:translateY(-2px);box-shadow:var(--sh);}
+.quick-btn:active{transform:translateY(0);}
+.qb-emoji{font-size:22px;line-height:1;}
+.qb-name{font-size:13px;font-weight:700;color:var(--ink);}
+.qb-time{font-family:'DM Mono',monospace;font-size:11px;color:var(--ink3);}
+.qb-fire{position:absolute;top:8px;right:10px;font-size:10px;font-family:'DM Mono',monospace;
+  color:var(--lime);opacity:0;transition:opacity .2s;}
+.quick-btn:hover .qb-fire{opacity:1;}
+
+/* ── REMINDER FORM ──────────────────────────────────────────── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:580px){.form-grid{grid-template-columns:1fr;}}
+.fg{display:flex;flex-direction:column;gap:7px;}
+label{font-size:11px;font-family:'DM Mono',monospace;color:var(--ink3);
+  text-transform:uppercase;letter-spacing:.1em;}
+input[type=text],input[type=time],select,textarea{
+  background:var(--s1);border:1px solid var(--bdr);color:var(--ink);
+  font-family:'Cabinet Grotesk',sans-serif;font-size:14px;
+  padding:10px 13px;border-radius:var(--r8);outline:none;
+  transition:border-color .2s,background .3s;
+  width:100%;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--lime);}
+input::placeholder,textarea::placeholder{color:var(--ink3);}
+select option{background:var(--s0);}
+textarea{resize:vertical;min-height:72px;}
+
+.days-row{display:flex;gap:6px;flex-wrap:wrap;}
+.day-chip{background:var(--s1);border:1.5px solid var(--bdr);border-radius:100px;
+  padding:5px 12px;font-size:12px;font-family:'DM Mono',monospace;cursor:pointer;
+  color:var(--ink2);transition:all .15s;user-select:none;}
+.day-chip.on{background:var(--lime-bg);border-color:var(--lime);color:var(--lime-dk);}
+[data-theme="dark"] .day-chip.on{color:var(--lime-dk);}
+
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;}
+.btn-save{background:var(--lime);color:var(--lime-dk);border:none;
+  padding:11px 24px;border-radius:var(--r8);font-family:'DM Mono',monospace;
+  font-size:12px;font-weight:500;cursor:pointer;letter-spacing:.04em;
+  transition:all .15s;}
+.btn-save:hover{filter:brightness(1.06);transform:translateY(-1px);}
+.btn-save:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.btn-test{background:transparent;border:1px solid var(--bdr2);color:var(--ink2);
+  padding:11px 18px;border-radius:var(--r8);font-family:'DM Mono',monospace;
+  font-size:12px;cursor:pointer;transition:all .15s;}
+.btn-test:hover{border-color:var(--amber);color:var(--amber);}
+
+/* ── REMINDER LIST ──────────────────────────────────────────── */
+.reminder-list{display:flex;flex-direction:column;gap:10px;}
+.reminder-item{
+  background:var(--s0);border:1px solid var(--bdr);border-radius:var(--r12);
+  padding:16px 18px;display:flex;align-items:center;gap:14px;
+  transition:all .2s;
+}
+.reminder-item:hover{box-shadow:var(--sh);}
+.ri-color{width:4px;align-self:stretch;border-radius:2px;flex-shrink:0;}
+.ri-emoji{font-size:20px;flex-shrink:0;}
+.ri-body{flex:1;min-width:0;}
+.ri-title{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:2px;}
+.ri-meta{font-family:'DM Mono',monospace;font-size:11px;color:var(--ink3);
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.ri-days{display:flex;gap:4px;}
+.ri-day{width:20px;height:20px;border-radius:50%;background:var(--s2);
+  font-family:'DM Mono',monospace;font-size:8px;color:var(--ink3);
+  display:flex;align-items:center;justify-content:center;}
+.ri-day.on{background:var(--lime-bg);color:var(--lime-dk);}
+.ri-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.toggle-sw{position:relative;width:38px;height:20px;cursor:pointer;flex-shrink:0;}
+.toggle-sw input{opacity:0;width:0;height:0;position:absolute;}
+.sw-track{position:absolute;inset:0;background:var(--s2);border-radius:10px;
+  border:1px solid var(--bdr2);transition:background .2s;}
+.toggle-sw input:checked + .sw-track{background:var(--lime);border-color:var(--lime);}
+.sw-thumb{position:absolute;top:2px;left:2px;width:14px;height:14px;
+  border-radius:50%;background:#fff;transition:transform .2s cubic-bezier(.34,1.56,.64,1);
+  box-shadow:0 1px 3px rgba(0,0,0,.2);}
+.toggle-sw input:checked ~ .sw-thumb{transform:translateX(18px);}
+.ri-del{background:transparent;border:none;color:var(--ink3);cursor:pointer;
+  font-size:16px;padding:4px;transition:color .15s;line-height:1;}
+.ri-del:hover{color:var(--coral);}
+.ri-test{background:transparent;border:1px solid var(--bdr);color:var(--ink3);
+  cursor:pointer;font-size:11px;font-family:'DM Mono',monospace;
+  padding:4px 8px;border-radius:6px;transition:all .15s;}
+.ri-test:hover{border-color:var(--amber);color:var(--amber);}
+.empty-state{text-align:center;padding:40px 20px;color:var(--ink3);
+  font-size:13px;line-height:1.6;}
+.empty-state .em{font-size:32px;margin-bottom:12px;}
+
+/* ── TOAST NOTIFICATIONS ────────────────────────────────────── */
+#toastRoot{position:fixed;bottom:24px;right:24px;display:flex;
+  flex-direction:column-reverse;gap:10px;z-index:9999;pointer-events:none;}
+.toast{
+  background:var(--ink);color:var(--bg);
+  border-radius:var(--r12);padding:14px 18px;
+  max-width:320px;min-width:260px;
+  box-shadow:var(--sh-lg);
+  display:flex;align-items:flex-start;gap:12px;
+  pointer-events:all;
+  animation:toastIn .35s cubic-bezier(.34,1.56,.64,1) both;
+  position:relative;overflow:hidden;
+}
+@keyframes toastIn{from{opacity:0;transform:translateY(20px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes toastOut{to{opacity:0;transform:translateY(10px) scale(.95)}}
+.toast.out{animation:toastOut .25s ease both;}
+.toast-progress{
+  position:absolute;bottom:0;left:0;height:2px;background:var(--lime);
+  border-radius:0 0 2px 2px;width:100%;
+  animation:shrink linear both;
+  transform-origin:left;
+}
+@keyframes shrink{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+.toast-icon{font-size:20px;line-height:1;flex-shrink:0;margin-top:1px;}
+.toast-body{flex:1;min-width:0;}
+.toast-title{font-weight:700;font-size:13px;margin-bottom:2px;color:var(--bg);}
+.toast-desc{font-size:12px;color:rgba(255,255,255,.55);line-height:1.4;}
+[data-theme="dark"] .toast-desc{color:rgba(255,255,255,.45);}
+.toast-close{background:none;border:none;color:rgba(255,255,255,.35);
+  cursor:pointer;font-size:16px;padding:0;line-height:1;flex-shrink:0;}
+.toast-close:hover{color:rgba(255,255,255,.7);}
+.toast-actions{display:flex;gap:8px;margin-top:10px;}
+.ta-btn{background:rgba(255,255,255,.12);border:none;color:var(--bg);
+  font-size:11px;font-family:'DM Mono',monospace;padding:5px 10px;
+  border-radius:6px;cursor:pointer;transition:background .15s;}
+.ta-btn:hover{background:rgba(255,255,255,.2);}
+
+/* ── NEXT REMINDER WIDGET ─────────────────────────────────────── */
+.next-card{
+  background:var(--lime-bg);border:1px solid var(--lime);
+  border-radius:var(--r12);padding:16px 18px;
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:18px;gap:12px;flex-wrap:wrap;
+  transition:background .3s,border-color .3s;
+}
+.next-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--lime);
+  text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;}
+.next-title{font-size:14px;font-weight:700;color:var(--lime-dk);}
+.next-time{font-family:'DM Mono',monospace;font-size:11px;color:var(--lime);}
+.next-right{font-family:'DM Mono',monospace;font-size:28px;font-weight:500;
+  color:var(--lime-dk);}
+[data-theme="dark"] .next-title,[data-theme="dark"] .next-right{color:var(--lime-dk);}
+
+/* ── ANIMATIONS ─────────────────────────────────────────────── */
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.card{animation:up .4s ease both;}
+.card:nth-child(1){animation-delay:.05s}
+.card:nth-child(2){animation-delay:.10s}
+.card:nth-child(3){animation-delay:.15s}
+</style>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)"><meta name="theme-color" content="#f5f2eb" media="(prefers-color-scheme: light)">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Habits"><meta name="mobile-web-app-capable" content="yes">
+<script>
+// Auth guard — must be logged in to view reminders
+(function() {
+  if (!localStorage.getItem('ht_session_v1')) {
+    window.location.href = 'auth.html';
+  }
+})();
+</script>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="logo" href="index.html">★ <span>HABIT</span>TRACKER</a>
+  <div class="nav-r">
+    <a class="nav-a" href="index.html">Dashboard</a>
+    <a class="nav-a" href="analytics.html">Analytics</a>
+    <a class="nav-a on" href="#">Reminders</a>
+    <a class="nav-a" href="profile.html">Profile</a>
+    <button class="theme-btn" id="themeBtn"
+      onclick="ThemeManager.toggle();this.textContent=ThemeManager.getCurrent()==='dark'?'☀️ Light':'🌙 Dark'">
+      🌙 Dark
+    </button>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- PERMISSION CARD -->
+  <div class="perm-card" id="permCard">
+    <div class="perm-icon">🔔</div>
+    <div class="perm-text">
+      <h2>Browser Notifications</h2>
+      <p>Get reminders like <strong>"Time for Deep Work 🔥"</strong> even when the tab is in the background. Works on laptop and Android Chrome.</p>
+      <div class="perm-actions">
+        <button class="btn-enable" id="btnEnable" onclick="requestPermission()">Enable Notifications</button>
+        <div class="status-pill default" id="permStatus">
+          <div class="status-dot"></div>
+          <span id="permLabel">Not enabled</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEXT REMINDER COUNTDOWN -->
+  <div class="next-card" id="nextCard" style="display:none">
+    <div>
+      <div class="next-label">Next reminder</div>
+      <div class="next-title" id="nextTitle">—</div>
+      <div class="next-time" id="nextTime">—</div>
+    </div>
+    <div class="next-right" id="nextCountdown">—</div>
+  </div>
+
+  <!-- QUICK SEND (habit shortcuts) -->
+  <div class="card">
+    <div class="card-eye">⚡ Quick send</div>
+    <div class="card-title">Fire a Reminder Now</div>
+    <div class="quick-grid" id="quickGrid"></div>
+  </div>
+
+  <div class="div"><div class="div-line"></div><span class="div-lbl">Schedule Reminders</span><div class="div-line"></div></div>
+
+  <!-- ADD REMINDER FORM -->
+  <div class="card">
+    <div class="card-eye">➕ New reminder</div>
+    <div class="card-title">Create a Reminder</div>
+    <div class="form-grid">
+      <div class="fg">
+        <label>Habit</label>
+        <select id="formHabit"></select>
+      </div>
+      <div class="fg">
+        <label>Time</label>
+        <input type="time" id="formTime" value="06:00">
+      </div>
+      <div class="fg">
+        <label>Custom message (optional)</label>
+        <input type="text" id="formMsg" placeholder='e.g. "Let's get it 🔥"' maxlength="80">
+      </div>
+      <div class="fg">
+        <label>Sound</label>
+        <select id="formSound">
+          <option value="default">🔔 Default</option>
+          <option value="gentle">🎵 Gentle chime</option>
+          <option value="alarm">⏰ Alarm</option>
+          <option value="silent">🔇 Silent</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg" style="margin-top:14px">
+      <label>Repeat on days</label>
+      <div class="days-row" id="daysRow">
+        <div class="day-chip on" data-d="0">Sun</div>
+        <div class="day-chip on" data-d="1">Mon</div>
+        <div class="day-chip on" data-d="2">Tue</div>
+        <div class="day-chip on" data-d="3">Wed</div>
+        <div class="day-chip on" data-d="4">Thu</div>
+        <div class="day-chip on" data-d="5">Fri</div>
+        <div class="day-chip on" data-d="6">Sat</div>
+      </div>
+    </div>
+    <div class="btn-row" style="margin-top:18px">
+      <button class="btn-save" id="btnSave" onclick="saveReminder()">💾 Save Reminder</button>
+      <button class="btn-test" onclick="fireTestNow()">⚡ Test Now (5s)</button>
+    </div>
+  </div>
+
+  <div class="div"><div class="div-line"></div><span class="div-lbl">Your Reminders</span><div class="div-line"></div></div>
+
+  <!-- REMINDER LIST -->
+  <div class="reminder-list" id="reminderList">
+    <div class="empty-state">
+      <div class="em">⏰</div>
+      <div>No reminders yet.<br>Create your first one above.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST ROOT -->
+<div id="toastRoot"></div>
+
+<script>
+// ── CONSTANTS ────────────────────────────────────────────────
+const R_KEY   = 'ht_reminders_v2';
+const H_KEY   = 'habittracker_v3';
+const DOW     = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const CAT_COL = {health:'var(--lime)',study:'var(--sky)',work:'var(--amber)',discipline:'var(--coral)'};
+
+// Default habits if tracker data not found
+const DEFAULT_HABITS = [
+  {id:'h1', name:'Wake up at 5:15',        emoji:'🌅', category:'discipline'},
+  {id:'h2', name:'Plank + Exercise',        emoji:'💪', category:'health'},
+  {id:'h3', name:'Meditation',              emoji:'🧘', category:'health'},
+  {id:'h4', name:'Journaling',              emoji:'📓', category:'discipline'},
+  {id:'h5', name:'Deep Work [2hr]',         emoji:'🧠', category:'study'},
+  {id:'h6', name:'Daily Write [30 Pages]',  emoji:'✍️', category:'work'},
+  {id:'h7', name:'Work To Sir [Send]',      emoji:'📤', category:'work'},
+  {id:'h8', name:'Question Practice [20]',  emoji:'❓', category:'study'},
+  {id:'h9', name:'Phone Detox',             emoji:'📵', category:'discipline'},
+  {id:'h10',name:'No Doomscrolling',        emoji:'🚫', category:'discipline'},
+  {id:'h11',name:'No P.M.',                 emoji:'❌', category:'discipline'},
+];
+
+const MOTIVATIONS = [
+  "You've got this! 🔥",
+  "Small steps, big results 💪",
+  "Consistency is your superpower ⚡",
+  "Don't break the chain! 🔗",
+  "Future you will thank you 🙏",
+  "Champions train when they don't feel like it 🏆",
+  "One habit at a time 🎯",
+  "Show up. Every. Single. Day. 📅",
+];
+
+// ── STATE ────────────────────────────────────────────────────
+let habits    = [];
+let reminders = [];   // [{id, habitId, time, days, msg, sound, enabled}]
+let schedulerTimers = {};   // id → setTimeout handle
+let countdownTimer  = null;
+
+// ── INIT ─────────────────────────────────────────────────────
+function init() {
+  loadHabits();
+  loadReminders();
+  renderPermStatus();
+  renderQuickGrid();
+  renderFormHabits();
+  renderReminders();
+  scheduleAll();
+  startCountdown();
+
+  // Update toggle button label
+  const btn = document.getElementById('themeBtn');
+  if (btn) btn.textContent = ThemeManager.getCurrent() === 'dark' ? '☀️ Light' : '🌙 Dark';
+
+  // Register service worker for background notifications
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+
+  // Wire up day chips
+  document.querySelectorAll('.day-chip').forEach(chip => {
+    chip.addEventListener('click', () => chip.classList.toggle('on'));
+  });
+}
+
+function loadHabits() {
+  try {
+    const st = JSON.parse(localStorage.getItem(H_KEY));
+    if (st?.habits?.length) { habits = st.habits; return; }
+  } catch {}
+  habits = DEFAULT_HABITS;
+}
+
+function loadReminders() {
+  try { reminders = JSON.parse(localStorage.getItem(R_KEY)) || []; }
+  catch { reminders = []; }
+}
+
+function saveReminderState() {
+  localStorage.setItem(R_KEY, JSON.stringify(reminders));
+}
+
+// ── PERMISSION ───────────────────────────────────────────────
+function renderPermStatus() {
+  const perm  = Notification.permission;
+  const btn   = document.getElementById('btnEnable');
+  const pill  = document.getElementById('permStatus');
+  const label = document.getElementById('permLabel');
+
+  pill.className = 'status-pill ' + perm;
+  if (perm === 'granted') {
+    btn.disabled = true;
+    btn.textContent = '✓ Notifications Enabled';
+    label.textContent = 'Enabled';
+    pill.className = 'status-pill granted';
+  } else if (perm === 'denied') {
+    btn.disabled = true;
+    btn.textContent = 'Blocked in browser settings';
+    label.textContent = 'Blocked — enable in browser settings';
+    pill.className = 'status-pill denied';
+  } else {
+    btn.disabled = false;
+    btn.textContent = 'Enable Notifications';
+    label.textContent = 'Click to enable';
+  }
+}
+
+async function requestPermission() {
+  const result = await Notification.requestPermission();
+  renderPermStatus();
+  if (result === 'granted') {
+    showToast('🔔', 'Notifications enabled!', 'You\'ll get reminders even in the background.', 3000);
+    scheduleAll();
+  } else if (result === 'denied') {
+    showToast('🚫', 'Notifications blocked', 'Go to browser Settings → Site permissions to enable.', 5000, 'error');
+  }
+}
+
+// ── QUICK GRID ───────────────────────────────────────────────
+function renderQuickGrid() {
+  const times = {
+    h1:'05:15', h2:'06:00', h3:'06:30', h4:'07:00',
+    h5:'09:00', h6:'10:00', h7:'11:00', h8:'16:00',
+    h9:'20:00', h10:'21:00', h11:'22:00',
+  };
+  document.getElementById('quickGrid').innerHTML = habits.slice(0, 8).map(h => `
+    <button class="quick-btn" onclick="fireHabitNow('${h.id}')">
+      <div class="qb-emoji">${h.emoji}</div>
+      <div class="qb-name">${h.name}</div>
+      <div class="qb-time">⚡ Send now</div>
+      <div class="qb-fire">notify →</div>
+    </button>`).join('');
+}
+
+// ── FORM ─────────────────────────────────────────────────────
+function renderFormHabits() {
+  document.getElementById('formHabit').innerHTML =
+    habits.map(h => `<option value="${h.id}">${h.emoji} ${h.name}</option>`).join('');
+}
+
+function getSelectedDays() {
+  return [...document.querySelectorAll('.day-chip.on')].map(c => +c.dataset.d);
+}
+
+function saveReminder() {
+  if (Notification.permission !== 'granted') {
+    showToast('⚠️', 'Enable notifications first', 'Click the "Enable Notifications" button at the top.', 3500, 'warn');
+    return;
+  }
+  const habitId = document.getElementById('formHabit').value;
+  const time    = document.getElementById('formTime').value;
+  const msg     = document.getElementById('formMsg').value.trim();
+  const sound   = document.getElementById('formSound').value;
+  const days    = getSelectedDays();
+
+  if (!time) { showToast('⚠️', 'Pick a time', 'Select a reminder time first.', 2500, 'warn'); return; }
+  if (!days.length) { showToast('⚠️', 'Pick at least one day', '', 2500, 'warn'); return; }
+
+  const reminder = {
+    id:      'r_' + Date.now(),
+    habitId, time, msg, sound, days,
+    enabled: true,
+    created: new Date().toISOString(),
+  };
+  reminders.push(reminder);
+  saveReminderState();
+  scheduleReminder(reminder);
+  renderReminders();
+  updateNextCard();
+
+  const habit = habits.find(h => h.id === habitId);
+  showToast('✅', 'Reminder saved!', `${habit?.emoji || ''} ${habit?.name || ''} · ${formatTime(time)}`, 3000);
+  document.getElementById('formMsg').value = '';
+}
+
+// ── REMINDER LIST ─────────────────────────────────────────────
+function renderReminders() {
+  const el = document.getElementById('reminderList');
+  if (!reminders.length) {
+    el.innerHTML = `<div class="empty-state"><div class="em">⏰</div><div>No reminders yet.<br>Create your first one above.</div></div>`;
+    return;
+  }
+
+  const sorted = [...reminders].sort((a, b) => a.time.localeCompare(b.time));
+  el.innerHTML = sorted.map(r => {
+    const habit  = habits.find(h => h.id === r.habitId) || {emoji:'⏰', name:'Habit', category:'health'};
+    const color  = CAT_COL[habit.category] || 'var(--ink3)';
+    const daysHtml = DOW.map((d, i) =>
+      `<div class="ri-day ${r.days.includes(i) ? 'on' : ''}">${d[0]}</div>`
+    ).join('');
+    return `
+    <div class="reminder-item" id="ri-${r.id}">
+      <div class="ri-color" style="background:${color}"></div>
+      <div style="font-size:20px">${habit.emoji}</div>
+      <div class="ri-body">
+        <div class="ri-title">${habit.name}</div>
+        <div class="ri-meta">
+          <span>⏰ ${formatTime(r.time)}</span>
+          <div class="ri-days">${daysHtml}</div>
+          ${r.msg ? `<span style="color:var(--ink2)">· "${r.msg}"</span>` : ''}
+        </div>
+      </div>
+      <div class="ri-actions">
+        <button class="ri-test" onclick="fireReminderNow('${r.id}')">⚡ Test</button>
+        <label class="toggle-sw" title="${r.enabled ? 'Enabled' : 'Disabled'}">
+          <input type="checkbox" ${r.enabled ? 'checked' : ''} onchange="toggleReminder('${r.id}',this.checked)">
+          <div class="sw-track"></div>
+          <div class="sw-thumb"></div>
+        </label>
+        <button class="ri-del" onclick="deleteReminder('${r.id}')" title="Delete">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleReminder(id, enabled) {
+  const r = reminders.find(x => x.id === id);
+  if (!r) return;
+  r.enabled = enabled;
+  saveReminderState();
+  if (enabled) scheduleReminder(r);
+  else clearScheduled(id);
+  updateNextCard();
+  showToast(enabled ? '✅' : '⏸', enabled ? 'Reminder on' : 'Reminder paused', '', 2000);
+}
+
+function deleteReminder(id) {
+  clearScheduled(id);
+  reminders = reminders.filter(r => r.id !== id);
+  saveReminderState();
+  renderReminders();
+  updateNextCard();
+  showToast('🗑', 'Reminder deleted', '', 2000);
+}
+
+// ── SCHEDULING ───────────────────────────────────────────────
+function scheduleAll() {
+  reminders.filter(r => r.enabled).forEach(scheduleReminder);
+}
+
+function clearScheduled(id) {
+  if (schedulerTimers[id]) { clearTimeout(schedulerTimers[id]); delete schedulerTimers[id]; }
+}
+
+function scheduleReminder(reminder) {
+  clearScheduled(reminder.id);
+  if (!reminder.enabled || Notification.permission !== 'granted') return;
+
+  const now       = new Date();
+  const [hh, mm]  = reminder.time.split(':').map(Number);
+  const nextFire  = getNextFireTime(hh, mm, reminder.days);
+  if (!nextFire) return;
+
+  const delay = nextFire - now;
+  if (delay < 0) return;
+
+  schedulerTimers[reminder.id] = setTimeout(() => {
+    fireReminder(reminder);
+    // Re-schedule for next occurrence
+    setTimeout(() => scheduleReminder(reminder), 2000);
+  }, delay);
+}
+
+function getNextFireTime(hh, mm, days) {
+  const now = new Date();
+  for (let offset = 0; offset < 8; offset++) {
+    const candidate = new Date(now);
+    candidate.setDate(now.getDate() + offset);
+    candidate.setHours(hh, mm, 0, 0);
+    const dow = candidate.getDay();
+    if (days.includes(dow) && candidate > now) return candidate;
+  }
+  return null;
+}
+
+// ── FIRE NOTIFICATIONS ────────────────────────────────────────
+function fireReminder(reminder) {
+  const habit  = habits.find(h => h.id === reminder.habitId) || {emoji:'⏰', name:'Habit'};
+  const motiv  = MOTIVATIONS[Math.floor(Math.random() * MOTIVATIONS.length)];
+  const title  = `${habit.emoji} Time for ${habit.name}`;
+  const body   = reminder.msg || motiv;
+
+  // Browser native notification
+  if (Notification.permission === 'granted') {
+    const n = new Notification(title, {
+      body,
+      icon:    'https://via.placeholder.com/192/b8f542/1a3a00?text=HT',
+      badge:   'https://via.placeholder.com/72/b8f542/1a3a00?text=H',
+      tag:     reminder.id,
+      renotify: true,
+      vibrate: [200, 100, 200],
+    });
+    n.onclick = () => { window.focus(); n.close(); };
+    setTimeout(() => n.close(), 8000);
+  }
+
+  // Also show in-app toast
+  showToast(habit.emoji, title, body, 6000, 'reminder', () => {
+    window.focus();
+  });
+}
+
+function fireHabitNow(habitId) {
+  const habit  = habits.find(h => h.id === habitId);
+  if (!habit) return;
+  const motiv  = MOTIVATIONS[Math.floor(Math.random() * MOTIVATIONS.length)];
+  const title  = `${habit.emoji} Time for ${habit.name}`;
+
+  if (Notification.permission === 'granted') {
+    const n = new Notification(title, {
+      body:    motiv,
+      icon:    'https://via.placeholder.com/192/b8f542/1a3a00?text=HT',
+      tag:     'quick-' + habitId,
+      renotify: true,
+    });
+    n.onclick = () => { window.focus(); n.close(); };
+    setTimeout(() => n.close(), 6000);
+    showToast(habit.emoji, title, motiv, 4000, 'reminder');
+  } else {
+    showToast('⚠️', 'Enable notifications first', '', 2500, 'warn');
+    requestPermission();
+  }
+}
+
+function fireReminderNow(id) {
+  const r = reminders.find(x => x.id === id);
+  if (r) fireReminder(r);
+}
+
+function fireTestNow() {
+  const habitId = document.getElementById('formHabit').value;
+  const msg     = document.getElementById('formMsg').value.trim();
+  const habit   = habits.find(h => h.id === habitId) || {emoji:'⏰', name:'Habit'};
+  const title   = `${habit.emoji} Time for ${habit.name}`;
+  const body    = msg || MOTIVATIONS[Math.floor(Math.random() * MOTIVATIONS.length)];
+
+  if (Notification.permission !== 'granted') {
+    showToast('⚠️', 'Enable notifications first', '', 2500, 'warn');
+    requestPermission();
+    return;
+  }
+
+  showToast('⚡', 'Test firing in 5 seconds...', 'Check your OS notification tray', 4000);
+  setTimeout(() => {
+    new Notification(title, {
+      body,
+      icon: 'https://via.placeholder.com/192/b8f542/1a3a00?text=HT',
+      tag:  'test-now',
+    });
+    showToast(habit.emoji, title, body, 5000, 'reminder');
+  }, 5000);
+}
+
+// ── COUNTDOWN WIDGET ─────────────────────────────────────────
+function updateNextCard() {
+  if (!reminders.some(r => r.enabled)) {
+    document.getElementById('nextCard').style.display = 'none'; return;
+  }
+
+  const now = new Date();
+  let earliest = null, earliestReminder = null;
+  reminders.filter(r => r.enabled).forEach(r => {
+    const [hh, mm] = r.time.split(':').map(Number);
+    const t = getNextFireTime(hh, mm, r.days);
+    if (t && (!earliest || t < earliest)) { earliest = t; earliestReminder = r; }
+  });
+
+  if (!earliest || !earliestReminder) {
+    document.getElementById('nextCard').style.display = 'none'; return;
+  }
+
+  document.getElementById('nextCard').style.display = 'flex';
+  const habit = habits.find(h => h.id === earliestReminder.habitId) || {emoji:'⏰', name:'Habit'};
+  document.getElementById('nextTitle').textContent  = `${habit.emoji} ${habit.name}`;
+  document.getElementById('nextTime').textContent   = `Scheduled ${formatTime(earliestReminder.time)} · ${DOW[earliest.getDay()]}`;
+
+  // Countdown
+  function tick() {
+    const diff  = Math.max(0, earliest - new Date());
+    const h     = Math.floor(diff / 3600000);
+    const m     = Math.floor((diff % 3600000) / 60000);
+    const s     = Math.floor((diff % 60000) / 1000);
+    document.getElementById('nextCountdown').textContent =
+      h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`;
+  }
+  tick();
+  if (countdownTimer) clearInterval(countdownTimer);
+  countdownTimer = setInterval(tick, 1000);
+}
+
+function startCountdown() { updateNextCard(); }
+
+// ── TOAST SYSTEM ─────────────────────────────────────────────
+const toastTimers = {};
+function showToast(icon, title, desc, duration = 3500, type = 'default', onClick = null) {
+  const root = document.getElementById('toastRoot');
+  const id   = 't_' + Date.now();
+
+  const el   = document.createElement('div');
+  el.className = 'toast';
+  el.id        = id;
+
+  const borderColor = type === 'error'    ? 'var(--coral)'
+                    : type === 'warn'     ? 'var(--amber)'
+                    : type === 'reminder' ? 'var(--lime)'
+                    : 'rgba(255,255,255,.08)';
+  el.style.borderLeft = `3px solid ${borderColor}`;
+
+  el.innerHTML = `
+    <div class="toast-icon">${icon}</div>
+    <div class="toast-body">
+      <div class="toast-title">${title}</div>
+      ${desc ? `<div class="toast-desc">${desc}</div>` : ''}
+      ${type === 'reminder' ? `
+        <div class="toast-actions">
+          <button class="ta-btn" onclick="window.focus()">Open Tracker</button>
+          <button class="ta-btn" onclick="closeToast('${id}')">Dismiss</button>
+        </div>` : ''}
+    </div>
+    <button class="toast-close" onclick="closeToast('${id}')">×</button>
+    <div class="toast-progress" style="animation-duration:${duration}ms"></div>`;
+
+  if (onClick) el.addEventListener('click', e => { if (!e.target.closest('button')) onClick(); });
+  root.appendChild(el);
+  if (onClick) el.style.cursor = 'pointer';
+
+  toastTimers[id] = setTimeout(() => closeToast(id), duration);
+}
+
+function closeToast(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('out');
+  clearTimeout(toastTimers[id]);
+  setTimeout(() => el.remove(), 300);
+}
+
+// ── HELPERS ──────────────────────────────────────────────────
+function formatTime(t) {
+  if (!t) return '';
+  const [h, m]   = t.split(':').map(Number);
+  const ampm      = h >= 12 ? 'PM' : 'AM';
+  const hh        = h % 12 || 12;
+  return `${hh}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+// ── START ─────────────────────────────────────────────────────
+init();
+</script>
+
+<script src="pwa.js"></script>
+<script>PWA.init({ page: 'reminders' });</script>
+</body>
+</html>
